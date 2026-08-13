@@ -34,9 +34,15 @@ async function syncFromCloud() {
     });
     if (res.ok) {
       const json = await res.json();
-      if (json && json.data && json.data.users) {
-        globalThis._coveUsersStore = { ...json.data.users };
-        return globalThis._coveUsersStore;
+      if (json && json.data) {
+        if (json.data.jsonStr) {
+          const parsed = JSON.parse(json.data.jsonStr);
+          globalThis._coveUsersStore = { ...parsed };
+          return globalThis._coveUsersStore;
+        } else if (json.data.users) {
+          globalThis._coveUsersStore = { ...json.data.users };
+          return globalThis._coveUsersStore;
+        }
       }
     }
   } catch (e) {
@@ -59,8 +65,12 @@ async function syncToCloud() {
     let cloudUsers = {};
     if (res.ok) {
       const json = await res.json();
-      if (json && json.data && json.data.users) {
-        cloudUsers = json.data.users;
+      if (json && json.data) {
+        if (json.data.jsonStr) {
+          cloudUsers = JSON.parse(json.data.jsonStr);
+        } else if (json.data.users) {
+          cloudUsers = json.data.users;
+        }
       }
     }
 
@@ -68,18 +78,19 @@ async function syncToCloud() {
     const merged = { ...cloudUsers, ...globalThis._coveUsersStore };
     globalThis._coveUsersStore = merged;
 
-    // 3. Persist back to cloud
+    // 3. Persist back to cloud with safe stringification
     const putRes = await fetch(CLOUD_DB_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'cove_store_db',
-        data: { users: merged }
+        data: { jsonStr: JSON.stringify(merged) }
       })
     });
 
     if (!putRes.ok) {
-      console.error(`Cloud DB PUT returned status ${putRes.status}`);
+      const errText = await putRes.text();
+      console.error(`Cloud DB PUT returned status ${putRes.status}:`, errText);
     }
   } catch (e) {
     console.error('Cloud DB push error:', e);
