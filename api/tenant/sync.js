@@ -30,12 +30,12 @@ export default async function handler(req, res) {
 
       // If APK reports recent activity logs, append to server activities
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
-        const existingIds = new Set((user.activities || []).map(a => a.id));
+        const existingIds = new Set((user.activities || []).map(a => String(a.id)));
         const newActivities = recentLogs
-          .filter(l => !existingIds.has(l.id))
+          .filter(l => l && !existingIds.has(String(l.id)))
           .map(l => ({
-            id: l.id ? String(l.id) : `act_${Date.now()}_${Math.random()}`,
-            time: new Date(l.timestampMillis || Date.now()).toLocaleTimeString(),
+            id: String(l.id || `act_${Date.now()}_${Math.random()}`),
+            time: new Date(l.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             sender: l.sender || 'Customer',
             incoming: l.incoming || '',
             reply: l.reply || '',
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
           }));
 
         if (newActivities.length > 0) {
-          user.activities = [...newActivities, ...(user.activities || [])].slice(0, 100);
+          user.activities = [...newActivities, ...(user.activities || [])].slice(0, 200);
           user.totalRequests = (user.totalRequests || 0) + newActivities.length;
         }
       }
