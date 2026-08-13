@@ -1,4 +1,4 @@
-import { getAllUsers, getUser, saveUser, createUser } from '../_db.js';
+import { getAllUsers, getUser, saveUser, createUser, deleteUser } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -23,6 +23,11 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const action = req.body?.action;
       const data = req.body?.data || req.body;
+
+      if (action === 'delete_user' && data.id) {
+        await deleteUser(data.id);
+        return res.status(200).json({ success: true, deletedId: data.id });
+      }
 
       if (action === 'create_user' || req.body?.isNewUser) {
         if (!data.id || !data.password) {
