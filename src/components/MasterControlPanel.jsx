@@ -93,13 +93,16 @@ export default function MasterControlPanel({ onBackToHome }) {
   // Fetch real users from backend API
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch(`/api/admin/users?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.users && Array.isArray(data.users)) {
           setUsers(data.users);
-          if (!selectedUserId && data.users.length > 0) {
-            setSelectedUserId(data.users[0].id);
+          if (data.users.length > 0) {
+            setSelectedUserId(prev => (prev && data.users.some(u => u.id === prev)) ? prev : data.users[0].id);
           }
         }
       }
@@ -115,7 +118,7 @@ export default function MasterControlPanel({ onBackToHome }) {
       const interval = setInterval(fetchUsers, 3000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, selectedUserId]);
+  }, [isAuthenticated]);
 
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
 
@@ -195,13 +198,53 @@ export default function MasterControlPanel({ onBackToHome }) {
         return;
       }
 
+      const createdUser = resData.user || {
+        id: payload.id,
+        password: payload.password,
+        storeName: payload.storeName,
+        balance: payload.balance,
+        status: payload.balance <= 0 ? 'Paused (Zero Balance)' : 'Active',
+        fixedFeePerMessage: payload.fixedFeePerMessage,
+        pricingMode: 'fixed_fee',
+        totalRequests: 0,
+        activities: [],
+        businessProfile: {
+          businessName: payload.storeName,
+          businessInfo: '',
+          replyTone: 'Professional, friendly, and concise',
+          aiRules: ''
+        },
+        spamConfig: {
+          spamEnabled: true,
+          cooldownEnabled: true,
+          cooldownSeconds: 90,
+          maxRepliesEnabled: true,
+          maxReplies: 3,
+          windowEnabled: true,
+          windowMinutes: 10,
+          scheduleEnabled: false,
+          scheduleMode: 'ONLY_DURING',
+          scheduleStart: '09:00',
+          scheduleEnd: '18:00',
+          scheduleDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+          outOfHoursMsg: 'Thanks for contacting us! We are currently closed.'
+        },
+        blacklist: []
+      };
+
+      // Immediately insert into active UI list with 0 latency
+      setUsers(prev => {
+        const without = prev.filter(u => u.id !== createdUser.id);
+        return [createdUser, ...without];
+      });
+      setSelectedUserId(createdUser.id);
+
       triggerToast(`Store account "${payload.id}" created successfully!`);
       setShowCreateModal(false);
       setNewUserId('');
       setNewUserPass('');
       setNewStoreName('');
       setNewPhone('');
-      setSelectedUserId(payload.id);
       fetchUsers();
     } catch (err) {
       setCreateError(err.message || 'Network error');
