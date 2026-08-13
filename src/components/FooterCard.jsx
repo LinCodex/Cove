@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Shield, Terminal } from 'lucide-react';
+import { Zap, Shield, Terminal, Lock, Download } from 'lucide-react';
 
 export default function FooterCard({ onOpenDownloadModal }) {
   return (
@@ -8,6 +8,8 @@ export default function FooterCard({ onOpenDownloadModal }) {
         
         {/* Top Footer Row */}
         <div className="footer-top-row">
+          
+          {/* Brand Info */}
           <div className="footer-brand-col">
             <div className="elite-logo">
               <div className="elite-logo-icon">
@@ -16,31 +18,38 @@ export default function FooterCard({ onOpenDownloadModal }) {
               <span className="elite-logo-text">COVE.</span>
             </div>
             <p className="footer-tagline">
-              Credit-based automated SMS response engine for Android. High speed, zero monthly recurring fees, and 100% on-device privacy.
+              Credit-based automated SMS response engine for Android. High speed, zero monthly recurring fees, and 100% on-device data privacy.
             </p>
           </div>
 
+          {/* Navigation Links */}
           <div className="footer-links-col">
             <span className="footer-col-title">Navigation</span>
             <div className="footer-links-list">
               <a href="#simulator" className="footer-link">Live Simulator</a>
               <a href="#wallet" className="footer-link">Credit Wallet</a>
               <a href="#usecases" className="footer-link">Industry Use Cases</a>
-              <button onClick={onOpenDownloadModal} className="footer-link text-blue-400 font-semibold bg-transparent border-0 p-0 text-left cursor-pointer">
-                Access APK
-              </button>
+              <a href="#faq" className="footer-link">FAQ</a>
             </div>
           </div>
 
+          {/* Actions & APK Download */}
           <div className="footer-links-col">
-            <span className="footer-col-title">Architecture</span>
+            <span className="footer-col-title">Download & Specs</span>
             <div className="footer-links-list">
-              <span className="footer-static-item">Android 8.0+ Oreo to 15+</span>
+              <button 
+                onClick={onOpenDownloadModal}
+                className="footer-apk-btn"
+              >
+                <Lock size={12} className="text-blue-400" />
+                <span>Access APK Download</span>
+              </button>
+              <span className="footer-static-item">Android 8.0+ (19.2 MB)</span>
               <span className="footer-static-item">SQLite AES-256 Storage</span>
               <span className="footer-static-item">5-Tier Failover Slots</span>
-              <span className="footer-static-item">WorkManager Background</span>
             </div>
           </div>
+
         </div>
 
         {/* Bottom Copyright Row */}

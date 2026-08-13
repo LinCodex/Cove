@@ -2127,6 +2127,30 @@ html, body {
   color: #FFFFFF;
 }
 
+.footer-apk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(29, 97, 255, 0.12);
+  border: 1px solid rgba(29, 97, 255, 0.3);
+  color: #60A5FA;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s ease;
+  margin-bottom: 0.25rem;
+}
+
+.footer-apk-btn:hover {
+  background: rgba(29, 97, 255, 0.25);
+  border-color: rgba(29, 97, 255, 0.5);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
 .footer-static-item {
   font-size: 0.775rem;
   color: var(--text-dim);

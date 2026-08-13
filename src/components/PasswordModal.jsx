@@ -110,10 +110,6 @@ export default function PasswordModal({ isOpen, onClose }) {
           </div>
         </form>
 
-        <div className="modal-hint">
-          <span>Configured via <code>VITE_DOWNLOAD_PASSWORD</code> in environment</span>
-        </div>
-
       </div>
     </div>
   );
