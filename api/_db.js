@@ -1,11 +1,12 @@
 // Centralized Data & Persistence Layer for Cove Master Control & Client APKs
-// Supports Vercel KV / Upstash Redis if configured, with global memory store.
+// Supports Cloud REST DB (restful-api.dev) + Vercel KV / Upstash Redis + In-Memory Fallback.
 
-const DEFAULT_USERS = {};
+const DB_OBJECT_ID = process.env.COVE_DB_OBJECT_ID || 'ff8081819ff5b110019ffcd34e2814e9';
+const CLOUD_DB_URL = `https://api.restful-api.dev/objects/${DB_OBJECT_ID}`;
 
 // Global in-memory cache shared across warm function invocations
 if (!globalThis._coveUsersStore) {
-  globalThis._coveUsersStore = { ...DEFAULT_USERS };
+  globalThis._coveUsersStore = {};
 }
 
 export function parseBody(req) {
@@ -19,6 +20,42 @@ export function parseBody(req) {
     }
   }
   return {};
+}
+
+// Pull latest store state from persistent cloud database
+async function syncFromCloud() {
+  try {
+    const res = await fetch(CLOUD_DB_URL);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data && json.data.users) {
+        globalThis._coveUsersStore = {
+          ...globalThis._coveUsersStore,
+          ...json.data.users
+        };
+        return globalThis._coveUsersStore;
+      }
+    }
+  } catch (e) {
+    console.error('Cloud DB pull error:', e);
+  }
+  return globalThis._coveUsersStore;
+}
+
+// Push updated store state to persistent cloud database
+async function syncToCloud() {
+  try {
+    await fetch(CLOUD_DB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'cove_store_db',
+        data: { users: globalThis._coveUsersStore }
+      })
+    });
+  } catch (e) {
+    console.error('Cloud DB push error:', e);
+  }
 }
 
 // Remote KV helpers (Upstash Redis or Vercel KV)
@@ -63,6 +100,7 @@ async function kvSet(key, value) {
 }
 
 export async function getAllUsers() {
+  await syncFromCloud();
   const remote = await kvGet('cove_all_users');
   if (remote) {
     globalThis._coveUsersStore = { ...globalThis._coveUsersStore, ...remote };
@@ -73,12 +111,25 @@ export async function getAllUsers() {
 export async function getUser(userId) {
   if (!userId) return null;
   const cleanId = userId.trim();
+
+  // 1. Check local cache
+  if (globalThis._coveUsersStore[cleanId]) {
+    return globalThis._coveUsersStore[cleanId];
+  }
+
+  // 2. Pull from Cloud Database
+  await syncFromCloud();
+  if (globalThis._coveUsersStore[cleanId]) {
+    return globalThis._coveUsersStore[cleanId];
+  }
+
+  // 3. Pull from KV
   const remote = await kvGet(`cove_user_${cleanId}`);
   if (remote) {
     globalThis._coveUsersStore[cleanId] = remote;
     return remote;
   }
-  return globalThis._coveUsersStore[cleanId] || null;
+  return null;
 }
 
 export async function saveUser(user) {
@@ -90,7 +141,8 @@ export async function saveUser(user) {
     lastActive: Date.now()
   };
 
-  // Sync to KV if available
+  // Sync to Cloud DB & KV
+  await syncToCloud();
   await kvSet(`cove_user_${cleanId}`, globalThis._coveUsersStore[cleanId]);
   await kvSet('cove_all_users', globalThis._coveUsersStore);
   return true;
@@ -100,6 +152,7 @@ export async function deleteUser(userId) {
   if (!userId) return false;
   const cleanId = userId.trim();
   delete globalThis._coveUsersStore[cleanId];
+  await syncToCloud();
   await kvSet('cove_all_users', globalThis._coveUsersStore);
   return true;
 }
@@ -146,6 +199,7 @@ export async function createUser(userData) {
   };
 
   globalThis._coveUsersStore[userId] = newUser;
+  await syncToCloud();
   await kvSet(`cove_user_${userId}`, newUser);
   await kvSet('cove_all_users', globalThis._coveUsersStore);
   return newUser;
