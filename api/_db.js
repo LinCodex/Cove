@@ -69,7 +69,7 @@ async function syncToCloud() {
     globalThis._coveUsersStore = merged;
 
     // 3. Persist back to cloud
-    await fetch(CLOUD_DB_URL, {
+    const putRes = await fetch(CLOUD_DB_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -77,6 +77,10 @@ async function syncToCloud() {
         data: { users: merged }
       })
     });
+
+    if (!putRes.ok) {
+      console.error(`Cloud DB PUT returned status ${putRes.status}`);
+    }
   } catch (e) {
     console.error('Cloud DB push error:', e);
   }
