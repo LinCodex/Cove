@@ -100,7 +100,17 @@ export default function MasterControlPanel({ onBackToHome }) {
       if (res.ok) {
         const data = await res.json();
         if (data.users && Array.isArray(data.users)) {
-          setUsers(data.users);
+          setUsers(prev => {
+            const serverMap = new Map(data.users.map(u => [u.id, u]));
+            const merged = [...data.users];
+            // Keep any locally created user that might still be in-flight
+            prev.forEach(p => {
+              if (!serverMap.has(p.id)) {
+                merged.push(p);
+              }
+            });
+            return merged;
+          });
           if (data.users.length > 0) {
             setSelectedUserId(prev => (prev && data.users.some(u => u.id === prev)) ? prev : data.users[0].id);
           }
