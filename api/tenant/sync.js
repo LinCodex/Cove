@@ -1,4 +1,4 @@
-import { getUser, saveUser } from '../_db.js';
+import { getUser, saveUser, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  const userId = req.query.userId || req.body?.userId;
+  const body = parseBody(req);
+  const userId = req.query.userId || body.userId;
   if (!userId) {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { currentBalance, recentLogs } = req.body || {};
+      const { currentBalance, recentLogs } = body;
 
       // If APK reports recent activity logs, append to server activities
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {

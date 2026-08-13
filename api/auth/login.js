@@ -1,4 +1,4 @@
-import { getUser, createUser } from '../_db.js';
+import { getUser, createUser, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   // CORS Headers for Android APK & Web Clients
@@ -20,7 +20,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, password } = req.body || {};
+    const body = parseBody(req);
+    const userId = body.userId || body.id;
+    const password = body.password || body.pass;
+
     if (!userId || !password) {
       return res.status(400).json({ error: 'User ID and Password are required' });
     }

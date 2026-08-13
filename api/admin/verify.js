@@ -1,3 +1,5 @@
+import { parseBody } from '../_db.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +19,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { password } = req.body || {};
+    const body = parseBody(req);
+    const password = body.password || body.pass;
     const masterAdminPassword = process.env.MASTER_ADMIN_PASSWORD || process.env.VITE_MASTER_ADMIN_PASSWORD;
 
     if (!masterAdminPassword) {

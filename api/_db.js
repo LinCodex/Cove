@@ -8,6 +8,19 @@ if (!globalThis._coveUsersStore) {
   globalThis._coveUsersStore = { ...DEFAULT_USERS };
 }
 
+export function parseBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 // Remote KV helpers (Upstash Redis or Vercel KV)
 async function kvGet(key) {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
