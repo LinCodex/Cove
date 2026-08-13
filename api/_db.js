@@ -29,10 +29,7 @@ async function syncFromCloud() {
     if (res.ok) {
       const json = await res.json();
       if (json && json.data && json.data.users) {
-        globalThis._coveUsersStore = {
-          ...globalThis._coveUsersStore,
-          ...json.data.users
-        };
+        globalThis._coveUsersStore = { ...json.data.users };
         return globalThis._coveUsersStore;
       }
     }
