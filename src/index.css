@@ -1,0 +1,582 @@
+/* Pure CSS Design System - 1:1 Match to Reference Mockup */
+
+:root {
+  --canvas-bg: #8FB4F8;
+  --dark-bg: #07090E;
+  --dark-panel: #0C0F17;
+  --card-inner: #131722;
+  --blue-primary: #1D61FF;
+  --blue-primary-hover: #1450DB;
+  --blue-text: #78B0FF;
+  --text-white: #FFFFFF;
+  --text-muted: #8E96A4;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-outline: rgba(255, 255, 255, 0.35);
+  --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--canvas-bg);
+  color: var(--text-white);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Outer Canvas Wrapper */
+.outer-canvas {
+  width: 100%;
+  min-height: 100vh;
+  background: #8FB4F8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .outer-canvas {
+    padding: 0;
+    background: #07090E;
+  }
+}
+
+/* Main Dark Web Card (Framed card like reference) */
+.main-card {
+  width: 100%;
+  max-width: 1160px;
+  background-color: var(--dark-bg);
+  border-radius: 36px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .main-card {
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 100%;
+  }
+}
+
+/* Top Navigation Bar */
+.navbar {
+  width: 100%;
+  padding: 2.25rem 3.5rem 1rem 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: #FFFFFF;
+}
+
+.brand-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-link {
+  color: #FFFFFF;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.nav-link:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .nav-link {
+    display: none;
+  }
+}
+
+/* Blue "Get the App" Pill */
+.btn-get-app {
+  background-color: var(--blue-primary);
+  color: #FFFFFF;
+  font-size: 0.925rem;
+  font-weight: 700;
+  padding: 0.65rem 1.5rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(29, 97, 255, 0.4);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-get-app:hover {
+  background-color: var(--blue-primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Hero Section */
+.hero-content {
+  padding: 2rem 3.5rem 0 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .hero-content {
+    flex-direction: column;
+    padding: 1.5rem 1.25rem 0 1.25rem;
+    text-align: center;
+    gap: 2.5rem;
+  }
+}
+
+/* Left Hero Column */
+.hero-left {
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .hero-left {
+    align-items: center;
+    max-width: 100%;
+  }
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: #8E96A4;
+  margin-bottom: 2rem;
+  letter-spacing: 0.02em;
+}
+
+.rating-row strong {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* Headline */
+.hero-title {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  color: #FFFFFF;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 1024px) {
+  .hero-title {
+    font-size: 3.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 2.5rem;
+    margin-bottom: 1.75rem;
+  }
+}
+
+.highlight-blue {
+  color: var(--blue-text);
+}
+
+/* Outlined Pill Button */
+.btn-hero-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: #FFFFFF;
+  border: 1.5px solid var(--border-outline);
+  border-radius: 9999px;
+  padding: 0.85rem 2.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.btn-hero-outline:hover {
+  border-color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Right Hero Column (Phone Mockup) */
+.hero-right {
+  position: relative;
+  width: 320px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .hero-right {
+    margin: 1rem auto;
+  }
+}
+
+/* Phone Frame */
+.phone-mockup {
+  width: 300px;
+  height: 540px;
+  background-color: #0A0C12;
+  border: 7px solid #1C212E;
+  border-radius: 42px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  font-size: 12px;
+}
+
+/* Phone Status Bar */
+.phone-status {
+  padding: 0.65rem 1.25rem 0.35rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #8E96A4;
+}
+
+.phone-time {
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.phone-notch {
+  width: 56px;
+  height: 10px;
+  background: #000000;
+  border-radius: 9999px;
+}
+
+.phone-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #FFFFFF;
+}
+
+/* Phone Header */
+.phone-nav {
+  padding: 0.5rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #CBD5E1;
+  font-size: 11px;
+}
+
+.phone-nav-title {
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+/* Phone Profile */
+.phone-profile {
+  padding: 0.5rem 1.25rem 0.75rem 1.25rem;
+}
+
+.profile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.profile-followers {
+  font-size: 10px;
+  color: #718096;
+}
+
+.profile-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-top: 2px;
+}
+
+.profile-handle {
+  font-size: 10px;
+  color: #718096;
+}
+
+.profile-avatar-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1D61FF, #60A5FA);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.profile-edit {
+  font-size: 9px;
+  color: var(--blue-primary);
+  font-weight: 600;
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.specialties-box {
+  margin-top: 0.75rem;
+}
+
+.specialties-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.specialties-desc {
+  font-size: 10px;
+  color: #718096;
+  margin-top: 2px;
+}
+
+/* At a Glance Section */
+.phone-glance {
+  padding: 0.65rem 1.25rem;
+  background-color: #0E121A;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glance-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 0.5rem;
+}
+
+.glance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.glance-card {
+  background-color: #141824;
+  border-radius: 10px;
+  padding: 0.5rem 0.35rem;
+  text-align: center;
+}
+
+.glance-label {
+  font-size: 8.5px;
+  color: #718096;
+  display: block;
+}
+
+.glance-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  margin: 3px 0;
+}
+
+.badge-nba {
+  background-color: rgba(29, 97, 255, 0.25);
+  color: #78B0FF;
+}
+
+.badge-dal {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #93C5FD;
+}
+
+.badge-player {
+  background-color: rgba(168, 85, 247, 0.2);
+  color: #D8B4FE;
+}
+
+.glance-value {
+  font-size: 9px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: block;
+}
+
+/* Categories Section */
+.phone-categories {
+  padding: 0.75rem 1.25rem;
+  background-color: #0A0C12;
+  flex: 1;
+}
+
+.categories-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 0.4rem;
+}
+
+.cat-label {
+  color: #718096;
+}
+
+.cat-rate {
+  color: #10B981;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #141824;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+
+.cat-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-icon {
+  width: 20px;
+  height: 20px;
+  background-color: var(--blue-primary);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9px;
+  color: #FFFFFF;
+}
+
+.cat-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: block;
+}
+
+.cat-sub {
+  font-size: 8.5px;
+  color: #718096;
+}
+
+.cat-status {
+  font-size: 9.5px;
+  color: #CBD5E1;
+  font-weight: 600;
+}
+
+/* 3D Floating Decorations */
+.deco-bars {
+  position: absolute;
+  top: -15px;
+  right: -25px;
+  width: 85px;
+  height: 85px;
+  pointer-events: none;
+  z-index: 10;
+  filter: drop-shadow(0 10px 15px rgba(29, 97, 255, 0.4));
+}
+
+.deco-trophy {
+  position: absolute;
+  bottom: -15px;
+  left: -25px;
+  width: 100px;
+  height: 100px;
+  pointer-events: none;
+  z-index: 10;
+  filter: drop-shadow(0 12px 25px rgba(0, 0, 0, 0.85));
+}
+
+/* Bottom Card / Banner (Exact match to reference bottom curve) */
+.bottom-banner {
+  margin-top: 3.5rem;
+  background-color: var(--dark-panel);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 36px 36px 0 0;
+  padding: 2.25rem 2rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .bottom-banner {
+    margin-top: 2rem;
+    padding: 1.75rem 1.25rem;
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+.bottom-banner-text {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .bottom-banner-text {
+    font-size: 0.95rem;
+  }
+}
