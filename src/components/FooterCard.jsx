@@ -30,6 +30,7 @@ export default function FooterCard({ onOpenDownloadModal }) {
               <a href="#wallet" className="footer-link">Credit Wallet</a>
               <a href="#usecases" className="footer-link">Industry Use Cases</a>
               <a href="#faq" className="footer-link">FAQ</a>
+              <a href="/mastercontrol" className="footer-link" style={{ color: '#38bdf8', fontWeight: '600' }}>⚡ Master Control Panel</a>
             </div>
           </div>
 

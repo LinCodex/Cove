@@ -1,0 +1,59 @@
+import { getAllUsers, getUser, saveUser, createUser } from '../_db.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    if (req.method === 'GET') {
+      const users = await getAllUsers();
+      return res.status(200).json({ success: true, users });
+    }
+
+    if (req.method === 'POST') {
+      const action = req.body?.action;
+      const data = req.body?.data || req.body;
+
+      if (action === 'create_user' || req.body?.isNewUser) {
+        if (!data.id || !data.password) {
+          return res.status(400).json({ error: 'User ID and Password are required to create a new user' });
+        }
+        const existing = await getUser(data.id);
+        if (existing) {
+          return res.status(400).json({ error: 'A store account with this User ID already exists' });
+        }
+        const newUser = await createUser(data);
+        return res.status(201).json({ success: true, user: newUser });
+      }
+
+      if (data.id) {
+        // Update existing user
+        let user = await getUser(data.id);
+        if (!user) {
+          user = await createUser(data);
+        } else {
+          user = { ...user, ...data };
+          await saveUser(user);
+        }
+        return res.status(200).json({ success: true, user });
+      }
+
+      return res.status(400).json({ error: 'Invalid request payload' });
+    }
+
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  } catch (error) {
+    console.error('Admin users API error:', error);
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+  }
+}

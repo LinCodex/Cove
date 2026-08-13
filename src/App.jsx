@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TopHeroCard from './components/TopHeroCard';
 import TopStatsCard from './components/TopStatsCard';
 import BottomWalletCard from './components/BottomWalletCard';
@@ -10,9 +10,41 @@ import FaqCard from './components/FaqCard';
 import BottomCtaCard from './components/BottomCtaCard';
 import FooterCard from './components/FooterCard';
 import PasswordModal from './components/PasswordModal';
+import MasterControlPanel from './components/MasterControlPanel';
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMasterControl, setViewMasterControl] = useState(
+    typeof window !== 'undefined' && 
+    (window.location.pathname.includes('mastercontrol') || window.location.hash.includes('mastercontrol'))
+  );
+
+  useEffect(() => {
+    const checkRoute = () => {
+      if (window.location.pathname.includes('mastercontrol') || window.location.hash.includes('mastercontrol')) {
+        setViewMasterControl(true);
+      }
+    };
+    window.addEventListener('popstate', checkRoute);
+    window.addEventListener('hashchange', checkRoute);
+    return () => {
+      window.removeEventListener('popstate', checkRoute);
+      window.removeEventListener('hashchange', checkRoute);
+    };
+  }, []);
+
+  if (viewMasterControl) {
+    return (
+      <MasterControlPanel 
+        onBackToHome={() => {
+          setViewMasterControl(false);
+          if (window.history.pushState) {
+            window.history.pushState('', '/', '/');
+          }
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="elite-canvas-wrapper">
