@@ -268,38 +268,39 @@ export default function MasterControlPanel({ onBackToHome }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '16px',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
       }}>
         <div style={{
           background: '#0f172a',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '24px',
-          padding: '36px 32px',
+          padding: 'clamp(24px, 6vw, 36px)',
           width: '100%',
           maxWidth: '420px',
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
-          textAlign: 'center'
+          textAlign: 'center',
+          boxSizing: 'border-box'
         }}>
           <div style={{
-            width: '60px',
-            height: '60px',
+            width: '56px',
+            height: '56px',
             borderRadius: '50%',
             background: 'rgba(56, 189, 248, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 18px auto',
+            margin: '0 auto 16px auto',
             border: '1px solid rgba(56, 189, 248, 0.25)'
           }}>
-            <span style={{ fontSize: '26px' }}>🔒</span>
+            <span style={{ fontSize: '24px' }}>🔒</span>
           </div>
 
-          <h2 style={{ color: '#f8fafc', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
+          <h2 style={{ color: '#f8fafc', fontSize: '19px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
             Master Control Security Gate
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 24px 0', lineHeight: '1.4' }}>
-            Restricted access. Please enter the Master Admin Password configured in your environment to continue.
+          <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 22px 0', lineHeight: '1.4' }}>
+            Restricted access. Please enter the Master Admin Password to continue.
           </p>
 
           <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -313,7 +314,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 background: 'rgba(0, 0, 0, 0.4)',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: '12px',
-                padding: '12px 16px',
+                padding: '12px 14px',
                 color: '#f8fafc',
                 fontSize: '14px',
                 outline: 'none',
@@ -337,7 +338,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 color: '#04131f',
                 border: 'none',
                 borderRadius: '12px',
-                padding: '12px',
+                padding: '13px',
                 fontWeight: '700',
                 fontSize: '14px',
                 cursor: 'pointer',
@@ -357,7 +358,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                 color: '#64748b',
                 fontSize: '13px',
                 cursor: 'pointer',
-                marginTop: '4px'
+                marginTop: '4px',
+                padding: '8px'
               }}
             >
               ← Back to Main Website
@@ -370,24 +372,26 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   // ─── AUTHENTICATED DASHBOARD ───
   return (
-    <div style={{
+    <div className="master-admin-root" style={{
       minHeight: '100vh',
       backgroundColor: '#0a0d12',
       color: '#f1f5f9',
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      padding: '24px 32px'
+      padding: 'clamp(14px, 3vw, 28px)'
     }}>
       
-      {/* Top Admin Header */}
+      {/* Top Admin Header (Mobile Fluid Wrap) */}
       <div style={{
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        paddingBottom: '18px',
-        marginBottom: '24px'
+        paddingBottom: '16px',
+        marginBottom: '20px',
+        gap: '14px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button 
             onClick={onBackToHome}
             style={{
@@ -395,38 +399,35 @@ export default function MasterControlPanel({ onBackToHome }) {
               border: '1px solid rgba(255, 255, 255, 0.15)',
               color: '#94a3b8',
               borderRadius: '10px',
-              padding: '8px 16px',
-              fontSize: '13px',
+              padding: '8px 14px',
+              fontSize: '12px',
               cursor: 'pointer',
-              fontWeight: '500'
+              fontWeight: '600'
             }}
           >
             ← Back to Cove
           </button>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '800', letterSpacing: '-0.5px' }}>
                 Cove Master Admin Control
               </h1>
               <span style={{
                 background: 'rgba(56, 189, 248, 0.15)',
                 color: '#38bdf8',
                 border: '1px solid rgba(56, 189, 248, 0.3)',
-                padding: '3px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                fontSize: '10px',
                 fontWeight: '700'
               }}>
-                LIVE REAL-TIME BACKEND
+                LIVE REAL-TIME
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>
-              Real live multi-tenant accounts, live SMS activity, per-user pricing, and instant balance sync.
-            </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setShowCreateModal(true)}
             style={{
@@ -434,9 +435,9 @@ export default function MasterControlPanel({ onBackToHome }) {
               color: '#04131f',
               border: 'none',
               borderRadius: '10px',
-              padding: '8px 18px',
+              padding: '8px 16px',
               fontWeight: '700',
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)'
             }}
@@ -451,13 +452,13 @@ export default function MasterControlPanel({ onBackToHome }) {
               color: '#ef4444',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               borderRadius: '10px',
-              padding: '8px 14px',
+              padding: '8px 12px',
               fontWeight: '600',
               fontSize: '12px',
               cursor: 'pointer'
             }}
           >
-            🔒 Lock & Logout
+            🔒 Lock
           </button>
         </div>
       </div>
@@ -465,14 +466,14 @@ export default function MasterControlPanel({ onBackToHome }) {
       {saveToast && (
         <div style={{
           position: 'fixed',
-          top: '20px',
-          right: '24px',
+          top: '16px',
+          right: '16px',
           background: '#10b981',
           color: '#ffffff',
-          padding: '12px 20px',
-          borderRadius: '12px',
+          padding: '10px 16px',
+          borderRadius: '10px',
           fontWeight: '600',
-          fontSize: '14px',
+          fontSize: '13px',
           boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
           zIndex: 999
         }}>
@@ -480,20 +481,24 @@ export default function MasterControlPanel({ onBackToHome }) {
         </div>
       )}
 
-      {/* Main Grid: Sidebar (Accounts) + Detail Workspace */}
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px' }}>
+      {/* Main Grid: Responsive auto-fit / collapsible on mobile */}
+      <div className="master-grid-container" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '20px'
+      }}>
         
-        {/* Left Sidebar: Client Accounts */}
+        {/* Account Selector Card */}
         <div style={{
           background: 'rgba(15, 23, 42, 0.65)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '18px',
-          padding: '20px',
+          padding: '16px',
           height: 'fit-content'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>Client Store Accounts</h2>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>{users.length} Active</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: '700', margin: 0 }}>Client Store Accounts</h2>
+            <span style={{ fontSize: '11px', color: '#64748b' }}>{users.length} Active</span>
           </div>
 
           <input
@@ -509,13 +514,13 @@ export default function MasterControlPanel({ onBackToHome }) {
               padding: '9px 12px',
               color: '#f8fafc',
               fontSize: '13px',
-              marginBottom: '14px',
+              marginBottom: '12px',
               outline: 'none',
               boxSizing: 'border-box'
             }}
           />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
             {filteredUsers.map(user => {
               const isSelected = user.id === selectedUser.id;
               const isZero = (user.balance || 0) <= 0;
@@ -527,24 +532,24 @@ export default function MasterControlPanel({ onBackToHome }) {
                     background: isSelected ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                     border: isSelected ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.06)',
                     borderRadius: '12px',
-                    padding: '12px',
+                    padding: '11px 13px',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '600', fontSize: '14px', color: isSelected ? '#38bdf8' : '#f1f5f9' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                    <span style={{ fontWeight: '600', fontSize: '13px', color: isSelected ? '#38bdf8' : '#f1f5f9' }}>
                       {user.storeName || user.id}
                     </span>
                     <span style={{
                       fontWeight: '700',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       color: isZero ? '#ef4444' : '#10b981'
                     }}>
                       ${(user.balance || 0).toFixed(2)}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
                     <span>ID: {user.id}</span>
                     <span style={{ color: isZero ? '#ef4444' : '#94a3b8' }}>{user.status || 'Active'}</span>
                   </div>
@@ -554,29 +559,29 @@ export default function MasterControlPanel({ onBackToHome }) {
           </div>
         </div>
 
-        {/* Right Workspace: Selected User Dashboard */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Selected User Management & Tabs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Top Banner: Store Status, Balance & Quick Top-Up */}
+          {/* Top Banner: Store Status & Balance */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.75)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '18px',
-            padding: '20px 24px'
+            padding: 'clamp(16px, 3vw, 22px)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: '700', letterSpacing: '0.6px' }}>SELECTED STORE TENANT</span>
-                <h2 style={{ fontSize: '22px', fontWeight: '800', margin: '2px 0' }}>{selectedUser.storeName || selectedUser.id}</h2>
-                <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+                <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: '700', letterSpacing: '0.6px' }}>SELECTED STORE TENANT</span>
+                <h2 style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '800', margin: '2px 0' }}>{selectedUser.storeName || selectedUser.id}</h2>
+                <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                   User ID: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: '4px', color: '#38bdf8' }}>{selectedUser.id}</code> | Password: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: '4px' }}>{selectedUser.password || '******'}</code>
                 </div>
               </div>
 
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#94a3b8' }}>Account Live Balance</div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Account Live Balance</div>
                 <div style={{
-                  fontSize: '32px',
+                  fontSize: 'clamp(24px, 5vw, 30px)',
                   fontWeight: '800',
                   color: (selectedUser.balance || 0) <= 0 ? '#ef4444' : '#10b981',
                   letterSpacing: '-1px'
@@ -584,12 +589,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                   ${(selectedUser.balance || 0).toFixed(3)}
                 </div>
                 {(selectedUser.balance || 0) <= 0 ? (
-                  <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>
-                    ⛔ AUTO-REPLY BLOCKED ON CLIENT APK
+                  <div style={{ fontSize: '11px', color: '#ef4444', fontWeight: '700' }}>
+                    ⛔ AUTO-REPLY PAUSED ON APK
                   </div>
                 ) : (
-                  <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>
-                    ✓ Auto-Reply Active (APK Synced)
+                  <div style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
+                    ✓ Auto-Reply Active
                   </div>
                 )}
               </div>
@@ -599,22 +604,22 @@ export default function MasterControlPanel({ onBackToHome }) {
             <div style={{
               background: 'rgba(0, 0, 0, 0.25)',
               borderRadius: '12px',
-              padding: '12px 16px',
+              padding: '10px 14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '10px'
+              gap: '8px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Real Balance Adjust:</span>
-                <button onClick={() => handleUpdateBalance(5)} style={btnStyle}>+$5.00</button>
-                <button onClick={() => handleUpdateBalance(10)} style={btnStyle}>+$10.00</button>
-                <button onClick={() => handleUpdateBalance(25)} style={btnStyle}>+$25.00</button>
-                <button onClick={() => handleUpdateBalance(50)} style={btnStyle}>+$50.00</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>Adjust:</span>
+                <button onClick={() => handleUpdateBalance(5)} style={btnStyle}>+$5</button>
+                <button onClick={() => handleUpdateBalance(10)} style={btnStyle}>+$10</button>
+                <button onClick={() => handleUpdateBalance(25)} style={btnStyle}>+$25</button>
+                <button onClick={() => handleUpdateBalance(50)} style={btnStyle}>+$50</button>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div>
                 <button 
                   onClick={handleSetZeroBalance} 
                   style={{
@@ -624,24 +629,28 @@ export default function MasterControlPanel({ onBackToHome }) {
                     borderColor: 'rgba(239, 68, 68, 0.4)'
                   }}
                 >
-                  Set to $0.000 (Pause Client APK)
+                  Set $0.00 (Pause APK)
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Navigation Tabs for Selected User */}
+          {/* Horizontally Scrollable Tabs for Mobile */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '6px',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            paddingBottom: '8px'
+            paddingBottom: '8px',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            whiteSpace: 'nowrap'
           }}>
             {[
-              { id: 'activity', label: '💬 Live SMS Activity Log' },
-              { id: 'pricing', label: '💲 Pricing & Token Rate' },
-              { id: 'profile', label: '⚙️ Store Profile & Setup' },
-              { id: 'spam_schedule', label: '🛡️ Spam Rules & Schedule' },
+              { id: 'activity', label: '💬 Live SMS Log' },
+              { id: 'pricing', label: '💲 Pricing & Tokens' },
+              { id: 'profile', label: '⚙️ Store Profile' },
+              { id: 'spam_schedule', label: '🛡️ Spam & Hours' },
               { id: 'blacklist', label: '🚫 Blacklist' }
             ].map(tab => (
               <button
@@ -652,10 +661,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   border: activeTab === tab.id ? '1px solid #38bdf8' : '1px solid transparent',
                   color: activeTab === tab.id ? '#38bdf8' : '#94a3b8',
                   borderRadius: '10px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
+                  padding: '7px 12px',
+                  fontSize: '12px',
                   fontWeight: '600',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  flexShrink: 0
                 }}
               >
                 {tab.label}
@@ -669,19 +679,19 @@ export default function MasterControlPanel({ onBackToHome }) {
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '18px',
-              padding: '20px'
+              padding: 'clamp(14px, 3vw, 20px)'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>
                     Live Customer Conversations & AI Auto-Replies
                   </h3>
-                  <p style={{ fontSize: '12px', color: '#94a3b8', margin: '2px 0 0 0' }}>
+                  <p style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 0 0' }}>
                     Live transcript feeds pushed directly from the on-device APK in real-time.
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <button 
                     onClick={() => setActivityFilter('all')}
                     style={{ ...filterBtnStyle, background: activityFilter === 'all' ? '#38bdf8' : 'rgba(255,255,255,0.06)', color: activityFilter === 'all' ? '#000' : '#fff' }}
@@ -704,29 +714,29 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
 
               {filteredActivities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px' }}>
                   No activity records logged for this user yet. (Incoming SMS will automatically stream here).
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {filteredActivities.map(act => (
                     <div
                       key={act.id}
                       style={{
                         background: 'rgba(0, 0, 0, 0.3)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '14px',
-                        padding: '16px'
+                        borderRadius: '12px',
+                        padding: '12px 14px'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontWeight: '700', fontSize: '15px', color: '#f8fafc' }}>{act.sender}</span>
-                          <span style={{ fontSize: '12px', color: '#64748b' }}>{act.time}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#f8fafc' }}>{act.sender}</span>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>{act.time}</span>
                           <span style={{
-                            fontSize: '11px',
+                            fontSize: '10px',
                             fontWeight: '600',
-                            padding: '2px 8px',
+                            padding: '1px 6px',
                             borderRadius: '6px',
                             background: act.status?.startsWith('Sent') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                             color: act.status?.startsWith('Sent') ? '#10b981' : '#ef4444'
@@ -735,33 +745,32 @@ export default function MasterControlPanel({ onBackToHome }) {
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Key: <code style={{ color: '#cbd5e1' }}>{act.keyUsed || 'AI Key'}</code></span>
-                          <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '700' }}>Cost: ${(act.cost || 0.005).toFixed(4)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#94a3b8' }}>
+                          <span style={{ color: '#38bdf8', fontWeight: '700' }}>${(act.cost || 0.005).toFixed(4)}</span>
                         </div>
                       </div>
 
                       {/* Chat Bubbles */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <div style={{
                           background: 'rgba(255, 255, 255, 0.05)',
-                          borderRadius: '10px',
-                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
                           borderLeft: '3px solid #94a3b8',
-                          fontSize: '13px'
+                          fontSize: '12px'
                         }}>
-                          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '11px', display: 'block', marginBottom: '2px' }}>CUSTOMER SMS</span>
+                          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '10px', display: 'block', marginBottom: '2px' }}>CUSTOMER SMS</span>
                           {act.incoming}
                         </div>
 
                         <div style={{
                           background: 'rgba(56, 189, 248, 0.08)',
-                          borderRadius: '10px',
-                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
                           borderLeft: '3px solid #38bdf8',
-                          fontSize: '13px'
+                          fontSize: '12px'
                         }}>
-                          <span style={{ color: '#38bdf8', fontWeight: '600', fontSize: '11px', display: 'block', marginBottom: '2px' }}>COVE AI AUTO-REPLY</span>
+                          <span style={{ color: '#38bdf8', fontWeight: '600', fontSize: '10px', display: 'block', marginBottom: '2px' }}>COVE AI AUTO-REPLY</span>
                           {act.reply}
                         </div>
                       </div>
@@ -778,16 +787,16 @@ export default function MasterControlPanel({ onBackToHome }) {
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '18px',
-              padding: '24px'
+              padding: 'clamp(14px, 3vw, 20px)'
             }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '700', margin: '0 0 8px 0' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 6px 0' }}>
                 💲 Client Message Pricing & Token Markup Rate
               </h3>
-              <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 20px 0' }}>
+              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px 0' }}>
                 Set how much this tenant is charged per automated SMS response. Changes sync in real-time to the client APK.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
                 
                 {/* Option 1: Fixed Flat Fee */}
                 <div 
@@ -795,19 +804,19 @@ export default function MasterControlPanel({ onBackToHome }) {
                   style={{
                     background: selectedUser.pricingMode === 'fixed_fee' ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                     border: selectedUser.pricingMode === 'fixed_fee' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.06)',
-                    borderRadius: '16px',
-                    padding: '18px',
+                    borderRadius: '14px',
+                    padding: '14px',
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px', color: selectedUser.pricingMode === 'fixed_fee' ? '#38bdf8' : '#f8fafc' }}>
+                  <div style={{ fontWeight: '700', fontSize: '13px', marginBottom: '4px', color: selectedUser.pricingMode === 'fixed_fee' ? '#38bdf8' : '#f8fafc' }}>
                     Fixed Flat Fee Per Message
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
-                    Deduct a predictable fixed cost on every reply regardless of length.
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                    Deduct a constant exact amount on every reply.
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '14px', color: '#94a3b8' }}>$</span>
+                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>$</span>
                     <input
                       type="number"
                       step="0.001"
@@ -815,7 +824,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
                       style={inputNumberStyle}
                     />
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>/ msg</span>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>/ msg</span>
                   </div>
                 </div>
 
@@ -825,36 +834,36 @@ export default function MasterControlPanel({ onBackToHome }) {
                   style={{
                     background: selectedUser.pricingMode === 'token_custom' ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                     border: selectedUser.pricingMode === 'token_custom' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.06)',
-                    borderRadius: '16px',
-                    padding: '18px',
+                    borderRadius: '14px',
+                    padding: '14px',
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px', color: selectedUser.pricingMode === 'token_custom' ? '#38bdf8' : '#f8fafc' }}>
+                  <div style={{ fontWeight: '700', fontSize: '13px', marginBottom: '4px', color: selectedUser.pricingMode === 'token_custom' ? '#38bdf8' : '#f8fafc' }}>
                     Custom Token Rates
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
-                    Bill based on actual AI token usage with custom markups.
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                    Bill based on actual AI token usage with markups.
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: '#94a3b8' }}>Input $/1M:</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ color: '#94a3b8' }}>In $/1M:</span>
                       <input
                         type="number"
                         step="0.05"
                         value={selectedUser.customInputPrice1M || 0.25}
                         onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: '#94a3b8' }}>Output $/1M:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ color: '#94a3b8' }}>Out $/1M:</span>
                       <input
                         type="number"
                         step="0.10"
                         value={selectedUser.customOutputPrice1M || 1.50}
                         onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
                   </div>
@@ -866,19 +875,19 @@ export default function MasterControlPanel({ onBackToHome }) {
                   style={{
                     background: selectedUser.pricingMode === 'default_ai' ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                     border: selectedUser.pricingMode === 'default_ai' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.06)',
-                    borderRadius: '16px',
-                    padding: '18px',
+                    borderRadius: '14px',
+                    padding: '14px',
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px', color: selectedUser.pricingMode === 'default_ai' ? '#38bdf8' : '#f8fafc' }}>
+                  <div style={{ fontWeight: '700', fontSize: '13px', marginBottom: '4px', color: selectedUser.pricingMode === 'default_ai' ? '#38bdf8' : '#f8fafc' }}>
                     Default AI Supplier Pricing
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
-                    Direct pass-through cost from the model provider.
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                    Direct pass-through cost from supplier.
                   </div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    Gemini 3.1 Flash Lite ($0.25 in / $1.50 out)
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Gemini 3.1 Flash Lite ($0.25 / $1.50)
                   </div>
                 </div>
 
@@ -892,13 +901,13 @@ export default function MasterControlPanel({ onBackToHome }) {
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '18px',
-              padding: '24px'
+              padding: 'clamp(14px, 3vw, 20px)'
             }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '700', margin: '0 0 16px 0' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 14px 0' }}>
                 ⚙️ Store Knowledge Base & AI Setup
               </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={labelStyle}>Business Name</label>
                   <input
@@ -912,7 +921,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div>
                   <label style={labelStyle}>Business Hours, Services & FAQ</label>
                   <textarea
-                    rows={4}
+                    rows={3}
                     defaultValue={selectedUser.businessProfile?.businessInfo || ''}
                     onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, businessInfo: e.target.value })}
                     style={{ ...inputTextStyle, resize: 'vertical' }}
@@ -932,7 +941,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div>
                   <label style={labelStyle}>Strict AI Rules & Restrictions</label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     defaultValue={selectedUser.businessProfile?.aiRules || ''}
                     onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, aiRules: e.target.value })}
                     style={{ ...inputTextStyle, resize: 'vertical' }}
@@ -948,47 +957,47 @@ export default function MasterControlPanel({ onBackToHome }) {
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '18px',
-              padding: '24px'
+              padding: 'clamp(14px, 3vw, 20px)'
             }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '700', margin: '0 0 16px 0' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 14px 0' }}>
                 🛡️ Spam Protection & Auto-Reply Scheduling
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '12px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#38bdf8' }}>Rate Limiting</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '12px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#38bdf8' }}>Rate Limiting</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>Cooldown Seconds:</span>
                       <input
                         type="number"
                         defaultValue={selectedUser.spamConfig?.cooldownSeconds || 90}
                         onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, cooldownSeconds: parseInt(e.target.value) || 90 })}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Max Replies in Window:</span>
+                      <span>Max Replies:</span>
                       <input
                         type="number"
                         defaultValue={selectedUser.spamConfig?.maxReplies || 3}
                         onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, maxReplies: parseInt(e.target.value) || 3 })}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '12px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#38bdf8' }}>Business Hours Schedule</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '12px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#38bdf8' }}>Business Hours</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>Start Time:</span>
                       <input
                         type="text"
                         defaultValue={selectedUser.spamConfig?.scheduleStart || '09:00'}
                         onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleStart: e.target.value })}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -997,7 +1006,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         type="text"
                         defaultValue={selectedUser.spamConfig?.scheduleEnd || '18:00'}
                         onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleEnd: e.target.value })}
-                        style={{ ...inputNumberStyle, width: '80px' }}
+                        style={{ ...inputNumberStyle, width: '70px' }}
                       />
                     </div>
                   </div>
@@ -1012,18 +1021,18 @@ export default function MasterControlPanel({ onBackToHome }) {
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '18px',
-              padding: '24px'
+              padding: 'clamp(14px, 3vw, 20px)'
             }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '700', margin: '0 0 16px 0' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 14px 0' }}>
                 🚫 Blocked Numbers & Blacklist
               </h3>
 
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
                 <input
                   id="newBlockInput"
                   type="text"
                   placeholder="Enter phone number to block..."
-                  style={{ ...inputTextStyle, maxWidth: '280px' }}
+                  style={{ ...inputTextStyle, maxWidth: '260px', flex: 1 }}
                 />
                 <button
                   onClick={() => {
@@ -1041,21 +1050,21 @@ export default function MasterControlPanel({ onBackToHome }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {(!selectedUser.blacklist || selectedUser.blacklist.length === 0) ? (
-                  <div style={{ color: '#64748b', fontSize: '13px' }}>No numbers blocked for this store.</div>
+                  <div style={{ color: '#64748b', fontSize: '12px' }}>No numbers blocked for this store.</div>
                 ) : (
                   selectedUser.blacklist.map(phone => (
                     <div
                       key={phone}
                       style={{
                         background: 'rgba(0,0,0,0.3)',
-                        padding: '10px 14px',
+                        padding: '9px 12px',
                         borderRadius: '10px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
                       }}
                     >
-                      <span style={{ fontSize: '14px', fontWeight: '600' }}>{phone}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600' }}>{phone}</span>
                       <button
                         onClick={() => handleRemoveBlockedNumber(phone)}
                         style={{ ...btnStyle, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
@@ -1073,7 +1082,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
       </div>
 
-      {/* CREATE NEW USER MODAL */}
+      {/* CREATE NEW USER MODAL (Responsive Mobile Sizing) */}
       {showCreateModal && (
         <div style={{
           position: 'fixed',
@@ -1086,24 +1095,28 @@ export default function MasterControlPanel({ onBackToHome }) {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
+          padding: '16px',
           backdropFilter: 'blur(4px)'
         }}>
           <div style={{
             background: '#0f172a',
             border: '1px solid rgba(255, 255, 255, 0.15)',
             borderRadius: '20px',
-            padding: '28px',
-            width: '460px',
-            maxWidth: '90vw'
+            padding: 'clamp(20px, 5vw, 28px)',
+            width: '100%',
+            maxWidth: '440px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxSizing: 'border-box'
           }}>
-            <h2 style={{ fontSize: '19px', fontWeight: '800', margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 6px 0' }}>
               ➕ Create New Store Tenant
             </h2>
-            <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 20px 0' }}>
-              Create an official User ID and Password. The store owner can immediately log into the Cove APK using these credentials.
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 18px 0' }}>
+              Create a User ID and Password. The store owner can immediately log into the Cove APK.
             </p>
 
-            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>User ID (Required for APK Login)</label>
                 <input
@@ -1139,7 +1152,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={labelStyle}>Initial Balance ($)</label>
                   <input
@@ -1168,7 +1181,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => { setShowCreateModal(false); setCreateError(''); }}
@@ -1184,7 +1197,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     color: '#04131f',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '8px 20px',
+                    padding: '8px 18px',
                     fontWeight: '700',
                     fontSize: '13px',
                     cursor: 'pointer'
@@ -1210,25 +1223,30 @@ const btnStyle = {
   borderRadius: '8px',
   fontSize: '12px',
   fontWeight: '600',
-  cursor: 'pointer'
+  cursor: 'pointer',
+  minHeight: '34px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center'
 };
 
 const filterBtnStyle = {
   border: 'none',
-  padding: '5px 12px',
-  borderRadius: '8px',
-  fontSize: '12px',
+  padding: '5px 10px',
+  borderRadius: '6px',
+  fontSize: '11px',
   fontWeight: '600',
-  cursor: 'pointer'
+  cursor: 'pointer',
+  minHeight: '30px'
 };
 
 const inputNumberStyle = {
   background: 'rgba(0, 0, 0, 0.5)',
   border: '1px solid rgba(255, 255, 255, 0.15)',
   borderRadius: '8px',
-  padding: '6px 10px',
+  padding: '6px 8px',
   color: '#f8fafc',
-  fontSize: '13px',
+  fontSize: '12px',
   outline: 'none'
 };
 
@@ -1237,7 +1255,7 @@ const inputTextStyle = {
   background: 'rgba(0, 0, 0, 0.4)',
   border: '1px solid rgba(255, 255, 255, 0.12)',
   borderRadius: '10px',
-  padding: '10px 14px',
+  padding: '9px 12px',
   color: '#f8fafc',
   fontSize: '13px',
   outline: 'none',
@@ -1246,8 +1264,8 @@ const inputTextStyle = {
 
 const labelStyle = {
   display: 'block',
-  fontSize: '12px',
+  fontSize: '11px',
   fontWeight: '600',
   color: '#94a3b8',
-  marginBottom: '6px'
+  marginBottom: '5px'
 };
