@@ -22,10 +22,16 @@ export function parseBody(req) {
   return {};
 }
 
-// Pull latest store state from persistent cloud database
+// Pull latest store state from persistent cloud database with zero cache
 async function syncFromCloud() {
   try {
-    const res = await fetch(CLOUD_DB_URL);
+    const res = await fetch(`${CLOUD_DB_URL}?_cb=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
     if (res.ok) {
       const json = await res.json();
       if (json && json.data && json.data.users) {
@@ -43,7 +49,13 @@ async function syncFromCloud() {
 async function syncToCloud() {
   try {
     // 1. Pull latest from cloud first to avoid overwriting other instances
-    const res = await fetch(CLOUD_DB_URL);
+    const res = await fetch(`${CLOUD_DB_URL}?_cb=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
     let cloudUsers = {};
     if (res.ok) {
       const json = await res.json();
