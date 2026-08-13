@@ -42,15 +42,30 @@ async function syncFromCloud() {
   return globalThis._coveUsersStore;
 }
 
-// Push updated store state to persistent cloud database
+// Push updated store state to persistent cloud database with fresh merge
 async function syncToCloud() {
   try {
+    // 1. Pull latest from cloud first to avoid overwriting other instances
+    const res = await fetch(CLOUD_DB_URL);
+    let cloudUsers = {};
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data && json.data.users) {
+        cloudUsers = json.data.users;
+      }
+    }
+
+    // 2. Merge local updates with cloud users
+    const merged = { ...cloudUsers, ...globalThis._coveUsersStore };
+    globalThis._coveUsersStore = merged;
+
+    // 3. Persist back to cloud
     await fetch(CLOUD_DB_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'cove_store_db',
-        data: { users: globalThis._coveUsersStore }
+        data: { users: merged }
       })
     });
   } catch (e) {
@@ -112,18 +127,13 @@ export async function getUser(userId) {
   if (!userId) return null;
   const cleanId = userId.trim();
 
-  // 1. Check local cache
-  if (globalThis._coveUsersStore[cleanId]) {
-    return globalThis._coveUsersStore[cleanId];
-  }
-
-  // 2. Pull from Cloud Database
+  // 1. Always pull latest from Cloud Database
   await syncFromCloud();
   if (globalThis._coveUsersStore[cleanId]) {
     return globalThis._coveUsersStore[cleanId];
   }
 
-  // 3. Pull from KV
+  // 2. Pull from KV if available
   const remote = await kvGet(`cove_user_${cleanId}`);
   if (remote) {
     globalThis._coveUsersStore[cleanId] = remote;
