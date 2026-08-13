@@ -3,6 +3,12 @@ import TopHeroCard from './components/TopHeroCard';
 import TopStatsCard from './components/TopStatsCard';
 import BottomWalletCard from './components/BottomWalletCard';
 import BottomUseCasesCard from './components/BottomUseCasesCard';
+import InteractiveSimulatorCard from './components/InteractiveSimulatorCard';
+import ComparisonCard from './components/ComparisonCard';
+import TechSpecsCard from './components/TechSpecsCard';
+import FaqCard from './components/FaqCard';
+import BottomCtaCard from './components/BottomCtaCard';
+import FooterCard from './components/FooterCard';
 import PasswordModal from './components/PasswordModal';
 
 export default function App() {
@@ -19,7 +25,7 @@ export default function App() {
       {/* Main Grid Container */}
       <div className="elite-container">
         
-        {/* Top Row: Hero Main Card (Left) + Stats Chart Card (Right) */}
+        {/* Row 1: Hero Main Card (Left) + Stats Chart Card (Right) */}
         <div className="elite-row-top">
           <div className="col-top-hero">
             <TopHeroCard onOpenDownloadModal={() => setIsModalOpen(true)} />
@@ -29,14 +35,44 @@ export default function App() {
           </div>
         </div>
 
-        {/* Bottom Row: Wallet Credit Card (Left) + Use Cases Card (Right) */}
-        <div className="elite-row-bottom">
+        {/* Row 2: Wallet Credit Card (Left) + Use Cases Card (Right) */}
+        <div className="elite-row-bottom" id="wallet">
           <div className="col-bottom-half">
             <BottomWalletCard />
           </div>
-          <div className="col-bottom-half">
+          <div className="col-bottom-half" id="usecases">
             <BottomUseCasesCard onOpenDownloadModal={() => setIsModalOpen(true)} />
           </div>
+        </div>
+
+        {/* Row 3: Live Interactive Simulator & Token Counter */}
+        <div className="elite-row-full" id="simulator">
+          <InteractiveSimulatorCard />
+        </div>
+
+        {/* Row 4: Comparison Table (Left) + Tech Performance Specs (Right) */}
+        <div className="elite-row-bottom">
+          <div className="col-bottom-half">
+            <ComparisonCard />
+          </div>
+          <div className="col-bottom-half">
+            <TechSpecsCard />
+          </div>
+        </div>
+
+        {/* Row 5: FAQ Accordion */}
+        <div className="elite-row-full" id="faq">
+          <FaqCard />
+        </div>
+
+        {/* Row 6: Bottom Download CTA + Mobile QR Scanner */}
+        <div className="elite-row-full">
+          <BottomCtaCard onOpenDownloadModal={() => setIsModalOpen(true)} />
+        </div>
+
+        {/* Row 7: Footer */}
+        <div className="elite-row-full">
+          <FooterCard onOpenDownloadModal={() => setIsModalOpen(true)} />
         </div>
 
       </div>
