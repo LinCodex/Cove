@@ -734,7 +734,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
                 { id: 'profile', label: 'Store Profile & AI', icon: Sliders },
                 { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
-                { id: 'blacklist', label: 'Blacklist', icon: Ban }
+                { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
               ].map(tab => {
                 const IconComp = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1087,19 +1087,22 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* TAB 5: BLACKLIST */}
+            {/* TAB 5: MANUAL REPLY LIST */}
             {activeTab === 'blacklist' && (
               <div style={panelCardStyle}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 12px 0', color: '#ffffff' }}>
-                  Blocked Numbers Blacklist
+                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 4px 0', color: '#ffffff' }}>
+                  Manual Reply List
                 </h3>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0' }}>
+                  Numbers in this list skip AI auto-replies so staff can reply manually.
+                </p>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   <input
                     id="newBlockInput"
                     type="text"
-                    placeholder="Enter phone number to block..."
-                    style={{ ...formInputStyle, maxWidth: '260px' }}
+                    placeholder="Enter phone number for manual reply..."
+                    style={{ ...formInputStyle, maxWidth: '280px' }}
                   />
                   <button
                     onClick={() => {
@@ -1111,14 +1114,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                     }}
                     style={primaryBtnStyle}
                   >
-                    + Block
+                    + Add Number
                   </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {(!selectedUser.blacklist || selectedUser.blacklist.length === 0) ? (
                     <div style={{ color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
-                      No phone numbers blocked for this store.
+                      No numbers in manual reply list for this store.
                     </div>
                   ) : (
                     selectedUser.blacklist.map(phone => (
