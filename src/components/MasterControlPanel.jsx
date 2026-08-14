@@ -46,8 +46,8 @@ const PROVIDER_DEFAULTS = {
     model: 'gemini-2.5-flash-lite',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     placeholder: 'AIzaSy...',
-    inputPrice1M: 0.075,
-    outputPrice1M: 0.30
+    inputPrice1M: 0.10,
+    outputPrice1M: 0.40
   },
   OPENAI: {
     name: 'OpenAI (ChatGPT)',
@@ -2225,14 +2225,15 @@ export default function MasterControlPanel({ onBackToHome }) {
               const activeProvKey = selectedUser?.aiConfig?.provider || 'GEMINI';
               const activeProvInfo = PROVIDER_DEFAULTS[activeProvKey] || PROVIDER_DEFAULTS.GEMINI;
               const activeModelName = selectedUser?.aiConfig?.model || activeProvInfo.model;
+              const isGemini31 = activeProvKey === 'GEMINI' && activeModelName.includes('3.1');
 
               const totalUserRequests = selectedUser?.activities?.length || selectedUser?.totalRequests || 0;
               const totalTokensIn = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensIn) || 0), 0);
               const totalTokensOut = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensOut) || 0), 0);
               const totalTokens = totalTokensIn + totalTokensOut;
 
-              const rawInputPrice = activeProvInfo.inputPrice1M || 0.075;
-              const rawOutputPrice = activeProvInfo.outputPrice1M || 0.30;
+              const rawInputPrice = activeProvKey === 'GEMINI' ? (isGemini31 ? 0.25 : 0.10) : (activeProvInfo.inputPrice1M || 0.10);
+              const rawOutputPrice = activeProvKey === 'GEMINI' ? (isGemini31 ? 1.50 : 0.40) : (activeProvInfo.outputPrice1M || 0.40);
               const rawInputCost = (totalTokensIn / 1000000) * rawInputPrice;
               const rawOutputCost = (totalTokensOut / 1000000) * rawOutputPrice;
               const actualRawTotalCost = rawInputCost + rawOutputCost;
@@ -2241,6 +2242,15 @@ export default function MasterControlPanel({ onBackToHome }) {
               const totalCustomerBilled = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
               const netMargin = totalCustomerBilled - actualRawTotalCost;
               const marginPercent = totalCustomerBilled > 0 ? ((netMargin / totalCustomerBilled) * 100).toFixed(1) : '0.0';
+
+              const benchmarkList = [
+                { name: 'Google Gemini 2.5 Flash-Lite', model: 'gemini-2.5-flash-lite', inPrice: 0.10, outPrice: 0.40, provKey: 'GEMINI', isMatch: activeProvKey === 'GEMINI' && !isGemini31 },
+                { name: 'Google Gemini 3.1 Flash-Lite', model: 'gemini-3.1-flash-lite', inPrice: 0.25, outPrice: 1.50, provKey: 'GEMINI', isMatch: activeProvKey === 'GEMINI' && isGemini31 },
+                { name: 'DeepSeek', model: 'deepseek-v4-flash', inPrice: 0.14, outPrice: 0.28, provKey: 'DEEPSEEK', isMatch: activeProvKey === 'DEEPSEEK' },
+                { name: 'OpenAI (ChatGPT)', model: 'gpt-4o-mini', inPrice: 0.15, outPrice: 0.60, provKey: 'OPENAI', isMatch: activeProvKey === 'OPENAI' },
+                { name: 'Anthropic Claude', model: 'claude-3-5-haiku-20241022', inPrice: 0.80, outPrice: 4.00, provKey: 'CLAUDE', isMatch: activeProvKey === 'CLAUDE' },
+                { name: 'xAI Grok', model: 'grok-4.1-fast', inPrice: 3.00, outPrice: 15.00, provKey: 'GROK', isMatch: activeProvKey === 'GROK' }
+              ];
 
               return (
                 <div style={cardSectionStyle}>
@@ -2485,29 +2495,27 @@ export default function MasterControlPanel({ onBackToHome }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.keys(PROVIDER_DEFAULTS).map((provKey) => {
-                            const p = PROVIDER_DEFAULTS[provKey];
-                            const isCurrent = activeProvKey === provKey;
-                            const est1kCost = ((80000 / 1000000) * p.inputPrice1M) + ((35000 / 1000000) * p.outputPrice1M);
+                          {benchmarkList.map((item, bIdx) => {
+                            const est1kCost = ((80000 / 1000000) * item.inPrice) + ((35000 / 1000000) * item.outPrice);
                             return (
-                              <tr key={provKey} style={{ borderBottom: '1px solid #f1f5f9', background: isCurrent ? '#f0fdf4' : '#ffffff' }}>
+                              <tr key={bIdx} style={{ borderBottom: '1px solid #f1f5f9', background: item.isMatch ? '#f0fdf4' : '#ffffff' }}>
                                 <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
-                                  {p.name}
+                                  {item.name}
                                 </td>
                                 <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#475569' }}>
-                                  {p.model}
+                                  {item.model}
                                 </td>
                                 <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
-                                  ${p.inputPrice1M.toFixed(3)}
+                                  ${item.inPrice.toFixed(3)}
                                 </td>
                                 <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
-                                  ${p.outputPrice1M.toFixed(3)}
+                                  ${item.outPrice.toFixed(3)}
                                 </td>
                                 <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
                                   ${est1kCost.toFixed(4)}
                                 </td>
                                 <td style={{ padding: '10px 14px' }}>
-                                  {isCurrent ? (
+                                  {item.isMatch ? (
                                     <span style={{
                                       background: '#ecfdf5',
                                       color: '#059669',
