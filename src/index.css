@@ -2405,11 +2405,17 @@ html, body {
 }
 
 @media (max-width: 768px) {
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+  }
+
   html, body {
     overflow-x: hidden !important;
     width: 100% !important;
     max-width: 100vw !important;
     position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   .elite-canvas-wrapper {
@@ -2421,9 +2427,7 @@ html, body {
   }
 
   .ambient-blob {
-    opacity: 0.4 !important;
-    filter: blur(80px) !important;
-    transform: scale(0.6) !important;
+    display: none !important;
   }
 
   .elite-container {
@@ -2437,6 +2441,7 @@ html, body {
   .elite-card {
     border-radius: 20px !important;
     padding: 1.25rem 1rem !important;
+    width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
@@ -2445,21 +2450,26 @@ html, body {
   .hero-main-card {
     padding: 1.25rem 1rem !important;
     min-height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .card-top-nav {
-    margin-bottom: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+    width: 100% !important;
   }
 
   .hero-big-title {
-    font-size: 1.85rem !important;
+    font-size: 1.75rem !important;
     line-height: 1.15 !important;
     letter-spacing: -0.02em !important;
+    word-break: break-word !important;
   }
 
   .hero-desc {
     font-size: 0.875rem !important;
     margin-bottom: 1.25rem !important;
+    word-break: break-word !important;
   }
 
   .hero-cta-row {
@@ -2479,20 +2489,22 @@ html, body {
   .section-card-title {
     font-size: 1.35rem !important;
     line-height: 1.2 !important;
+    word-break: break-word !important;
   }
 
   .section-card-desc {
     font-size: 0.85rem !important;
+    word-break: break-word !important;
   }
 
   /* 3D Phone Cluster Mobile Stacking */
   .hero-phones-cluster {
     height: 350px !important;
     width: 100% !important;
-    max-width: 320px !important;
+    max-width: 100% !important;
     margin: 1rem auto 0 auto !important;
     position: relative !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2502,234 +2514,6 @@ html, body {
     width: 155px !important;
     height: 310px !important;
     border-width: 4px !important;
-  }
-
-  .hero-phones-cluster .phone-left {
-    left: -8px !important;
-    transform: perspective(600px) rotateY(16deg) scale(0.82) !important;
-    opacity: 0.65 !important;
-    z-index: 1 !important;
-  }
-
-  .hero-phones-cluster .phone-right {
-    right: -8px !important;
-    left: auto !important;
-    transform: perspective(600px) rotateY(-16deg) scale(0.82) !important;
-    opacity: 0.65 !important;
-    z-index: 1 !important;
-  }
-
-  .hero-phones-cluster .phone-center {
-    left: 50% !important;
-    transform: translateX(-50%) scale(1) !important;
-    z-index: 5 !important;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(29, 97, 255, 0.3) !important;
-  }
-
-  /* Top Stats Card */
-  .stats-main-card {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .stats-giant-number {
-    font-size: 3rem !important;
-  }
-
-  .stats-card-footer {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 0.5rem !important;
-  }
-
-  .stat-footer-val {
-    font-size: 0.95rem !important;
-  }
-
-  /* Bottom Wallet Card */
-  .bottom-card-wallet {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .deposit-tiers-box {
-    padding: 1rem !important;
-  }
-
-  .tier-buttons-row {
-    gap: 0.35rem !important;
-  }
-
-  .tier-btn {
-    font-size: 0.75rem !important;
-    padding: 0.45rem 0 !important;
-  }
-
-  .wallet-mockup-panel {
-    padding: 1rem !important;
-  }
-
-  /* Bottom Use Cases Card */
-  .bottom-card-usecases {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .usecase-detail-panel {
-    padding: 1rem !important;
-  }
-
-  /* Simulator Card */
-  .simulator-full-card {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .simulator-card-header {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 1rem !important;
-  }
-
-  .simulator-wallet-badge {
-    width: 100% !important;
-    justify-content: space-between !important;
-  }
-
-  .simulator-main-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-
-  .sim-terminal-frame {
-    height: 420px !important;
-  }
-
-  .sim-terminal-input-bar {
-    padding: 0.65rem 0.85rem !important;
-    gap: 0.5rem !important;
-  }
-
-  .sim-input {
-    font-size: 0.8rem !important;
-    padding: 0.55rem 0.75rem !important;
-    min-width: 0 !important;
-  }
-
-  .btn-sim-send {
-    padding: 0.55rem 0.9rem !important;
-    font-size: 0.75rem !important;
-  }
-
-  /* Comparison Card */
-  .comparison-full-card {
-    padding: 1.25rem 1rem !important;
-    overflow: hidden !important;
-  }
-
-  .comparison-table-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    box-sizing: border-box !important;
-  }
-
-  .comparison-table {
-    min-width: 440px !important;
-  }
-
-  .comparison-table th,
-  .comparison-table td {
-    padding: 0.75rem 0.65rem !important;
-    font-size: 0.775rem !important;
-  }
-
-  /* Tech Specs Card */
-  .specs-full-card {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .specs-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
-  }
-
-  /* FAQ Card */
-  .faq-full-card {
-    padding: 1.25rem 1rem !important;
-  }
-
-  .faq-question-btn {
-    padding: 1rem !important;
-    font-size: 0.875rem !important;
-  }
-
-  .faq-answer-body {
-    padding: 0 1rem 1rem 1rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  /* Bottom CTA Card */
-  .bottom-cta-card {
-    padding: 2rem 1rem !important;
-  }
-
-  .cta-title {
-    font-size: 1.65rem !important;
-  }
-
-  .cta-desc {
-    font-size: 0.85rem !important;
-  }
-
-  .cta-features-strip {
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-    width: 100% !important;
-  }
-
-  .cta-strip-item {
-    width: 100% !important;
-    max-width: 280px !important;
-    justify-content: center !important;
-    font-size: 0.8rem !important;
-  }
-
-  .btn-large-cta {
-    width: 100% !important;
-    font-size: 0.925rem !important;
-    padding: 0.85rem 1.5rem !important;
-  }
-
-  /* Footer Card */
-  .footer-card {
-    padding: 1.5rem 1rem !important;
-  }
-
-  .footer-top-row {
-    grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
-  }
-
-  .footer-bottom-row {
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    gap: 0.75rem !important;
-  }
-
-  .footer-badges {
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 0.35rem !important;
-  }
-
-  .badge-sep {
-    display: none !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .hero-phones-cluster {
-    height: 330px !important;
-    max-width: 220px !important;
   }
 
   .hero-phones-cluster .phone-left,
@@ -2744,20 +2528,339 @@ html, body {
     margin: 0 auto !important;
     width: 175px !important;
     height: 330px !important;
+    z-index: 5 !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(29, 97, 255, 0.3) !important;
   }
-  
-  .hero-big-title {
-    font-size: 1.55rem !important;
+
+  /* Top Stats Card */
+  .stats-main-card {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
   }
 
   .stats-giant-number {
-    font-size: 2.5rem !important;
+    font-size: 2.75rem !important;
   }
 
   .stats-card-footer {
     grid-template-columns: 1fr !important;
+    gap: 0.6rem !important;
+    width: 100% !important;
+  }
+
+  .stat-footer-col {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.6rem 0.85rem !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+  }
+
+  .stat-footer-val {
+    font-size: 0.95rem !important;
+    margin-top: 0 !important;
+  }
+
+  /* Bottom Wallet Card */
+  .bottom-card-wallet {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .bottom-card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+    width: 100% !important;
+  }
+
+  .bottom-text-col,
+  .bottom-mockup-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .deposit-tiers-box {
+    padding: 0.85rem !important;
+    width: 100% !important;
+  }
+
+  .tier-buttons-row {
+    gap: 0.35rem !important;
+    width: 100% !important;
+  }
+
+  .tier-btn {
+    font-size: 0.75rem !important;
+    padding: 0.45rem 0 !important;
+  }
+
+  .wallet-mockup-panel {
+    padding: 1rem 0.85rem !important;
+    width: 100% !important;
+  }
+
+  .floating-notification-pill {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0.65rem 0.85rem !important;
+  }
+
+  .notif-bold {
+    font-size: 0.8rem !important;
+    word-break: break-word !important;
+  }
+
+  .mockup-receipt-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0.75rem !important;
+  }
+
+  .receipt-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+    margin-top: 6px !important;
+    word-break: break-word !important;
+  }
+
+  /* Bottom Use Cases Card */
+  .bottom-card-usecases {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .usecases-tabs-row {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .usecase-tab-btn {
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    flex-grow: 1 !important;
+    justify-content: center !important;
+  }
+
+  .usecase-detail-panel {
+    padding: 1rem 0.85rem !important;
+    width: 100% !important;
+  }
+
+  .trigger-item {
+    font-size: 0.75rem !important;
+    padding: 0.35rem 0.6rem !important;
+    word-break: break-word !important;
+  }
+
+  /* Simulator Card */
+  .simulator-full-card {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .simulator-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+    width: 100% !important;
+  }
+
+  .simulator-wallet-badge {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .simulator-main-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    width: 100% !important;
+  }
+
+  .sim-terminal-frame {
+    height: 400px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .sim-terminal-body {
+    padding: 0.85rem !important;
+  }
+
+  .sim-bubble-msg {
+    max-width: 90% !important;
+    word-break: break-word !important;
+  }
+
+  .sim-terminal-input-bar {
+    padding: 0.55rem 0.65rem !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .sim-input {
+    font-size: 0.775rem !important;
+    padding: 0.5rem 0.65rem !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+
+  .btn-sim-send {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.725rem !important;
+  }
+
+  /* Comparison Card */
+  .comparison-full-card {
+    padding: 1.25rem 1rem !important;
+    overflow: hidden !important;
+    width: 100% !important;
+  }
+
+  .comparison-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+    display: block !important;
+  }
+
+  .comparison-table {
+    min-width: 440px !important;
+    width: 100% !important;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 0.75rem 0.65rem !important;
+    font-size: 0.775rem !important;
+  }
+
+  /* Tech Specs Card */
+  .specs-full-card {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .specs-grid {
+    grid-template-columns: 1fr !important;
     gap: 0.75rem !important;
-    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .spec-item-box {
+    padding: 1rem 0.85rem !important;
+    width: 100% !important;
+  }
+
+  .spec-val-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.2rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .spec-desc-text {
+    font-size: 0.775rem !important;
+    word-break: break-word !important;
+  }
+
+  /* FAQ Card */
+  .faq-full-card {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .faq-question-btn {
+    padding: 0.85rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .faq-answer-body {
+    padding: 0 0.85rem 0.85rem 0.85rem !important;
+    font-size: 0.8rem !important;
+    word-break: break-word !important;
+  }
+
+  /* Bottom CTA Card */
+  .bottom-cta-card {
+    padding: 1.75rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .cta-title {
+    font-size: 1.55rem !important;
+    word-break: break-word !important;
+  }
+
+  .cta-desc {
+    font-size: 0.825rem !important;
+    word-break: break-word !important;
+  }
+
+  .cta-features-strip {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .cta-strip-item {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.8rem !important;
+  }
+
+  .btn-large-cta {
+    width: 100% !important;
+    font-size: 0.925rem !important;
+    padding: 0.85rem 1.25rem !important;
+  }
+
+  /* Footer Card */
+  .footer-card {
+    padding: 1.5rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .footer-top-row {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+  }
+
+  .footer-bottom-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+  }
+
+  .footer-badges {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+  }
+
+  .badge-sep {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-big-title {
+    font-size: 1.5rem !important;
+  }
+
+  .stats-giant-number {
+    font-size: 2.25rem !important;
   }
 }
 
