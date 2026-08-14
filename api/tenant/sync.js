@@ -54,17 +54,9 @@ export default async function handler(req, res) {
       // 2. If APK reports recent activity logs, record them in activities table
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
         await addActivities(user.id, recentLogs);
-        user.totalRequests = (user.totalRequests || 0) + recentLogs.length;
-
-        // Deduct cost of new activities from server balance
-        const totalDeduction = recentLogs.reduce((acc, log) => acc + (parseFloat(log.cost) || user.fixedFeePerMessage || 0.005), 0);
-        if (totalDeduction > 0 && user.balance > 0) {
-          user.balance = Math.max(0, user.balance - totalDeduction);
-          user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active';
-        }
       }
 
-      // 3. If APK reports recent balance transactions, merge them
+      // 3. If APK reports recent balance transactions, merge them into store history
       if (Array.isArray(recentTx) && recentTx.length > 0) {
         const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
         const newTx = recentTx
@@ -82,6 +74,15 @@ export default async function handler(req, res) {
 
         if (newTx.length > 0) {
           user.balanceHistory = [...newTx, ...(user.balanceHistory || [])].slice(0, 200);
+        }
+      }
+
+      // 4. Safely sync client deductions into server balance without decay loops
+      if (body.currentBalance != null && !isNaN(parseFloat(body.currentBalance))) {
+        const apkBalance = parseFloat(body.currentBalance);
+        if (apkBalance < user.balance) {
+          user.balance = Math.max(0, apkBalance);
+          user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : (user.forcedPause ? 'Force Paused' : 'Active');
         }
       }
 

@@ -171,10 +171,15 @@ export default function MasterControlPanel({ onBackToHome }) {
     backupSlot5: { enabled: false, provider: 'GEMINI', apiKey: '', model: 'gemini-3.1-flash-lite', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' }
   });
 
-  const [editFlags, setEditFlags] = useState({ profile: false, spam: false, ai: false });
+  const [pricingDraft, setPricingDraft] = useState({
+    pricingMode: 'fixed_fee',
+    fixedFeePerMessage: '0.0050'
+  });
+
+  const [editFlags, setEditFlags] = useState({ profile: false, spam: false, ai: false, pricing: false });
 
   useEffect(() => {
-    setEditFlags({ profile: false, spam: false, ai: false });
+    setEditFlags({ profile: false, spam: false, ai: false, pricing: false });
   }, [selectedUserId]);
 
   useEffect(() => {
@@ -219,6 +224,11 @@ export default function MasterControlPanel({ onBackToHome }) {
         backupSlot3: u.aiConfig?.backupSlot3 || { enabled: false, provider: 'DEEPSEEK', apiKey: '', model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com' },
         backupSlot4: u.aiConfig?.backupSlot4 || { enabled: false, provider: 'CLAUDE', apiKey: '', model: 'claude-3-5-haiku-20241022', baseUrl: 'https://api.anthropic.com/v1' },
         backupSlot5: u.aiConfig?.backupSlot5 || { enabled: false, provider: 'GEMINI', apiKey: '', model: 'gemini-3.1-flash-lite', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' }
+      });
+
+      setPricingDraft(prev => editFlags.pricing ? prev : {
+        pricingMode: u.pricingMode || 'fixed_fee',
+        fixedFeePerMessage: String(u.fixedFeePerMessage != null ? u.fixedFeePerMessage : '0.0050')
       });
     }
   }, [selectedUserId, users, editFlags]);
@@ -505,19 +515,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast(`Store balance reset to $0.00 (Auto-reply paused)`);
   };
 
-  const handleUpdatePricing = (pricingMode, fixedFee, inPrice1M, outPrice1M) => {
-    if (!selectedUser) return;
-    const updated = {
-      ...selectedUser,
-      pricingMode,
-      fixedFeePerMessage: parseFloat(fixedFee) || 0.005,
-      customInputPrice1M: parseFloat(inPrice1M) || 0.25,
-      customOutputPrice1M: parseFloat(outPrice1M) || 1.50
-    };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
-    triggerToast('Pricing overrides pushed to client APK!');
-  };
+
 
   const handleOpenPricingModal = () => {
     setTempModelRates(JSON.parse(JSON.stringify(modelRates)));
@@ -653,6 +651,7 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [spamSaving, setSpamSaving] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
 
   const handleSaveProfile = async () => {
     if (!selectedUser) return;
@@ -722,6 +721,28 @@ export default function MasterControlPanel({ onBackToHome }) {
       triggerToast('AI provider & backup chain keys synced to APK!');
     } else {
       triggerToast('⚠️ AI keys saved locally (Syncing with server...)');
+    }
+  };
+
+  const handleSavePricing = async () => {
+    if (!selectedUser) return;
+    setPricingSaving(true);
+    const fee = parseFloat(pricingDraft.fixedFeePerMessage);
+    const validFee = isNaN(fee) || fee < 0 ? 0.0050 : fee;
+    const mode = pricingDraft.pricingMode || 'fixed_fee';
+    const updated = {
+      ...selectedUser,
+      pricingMode: mode,
+      fixedFeePerMessage: validFee
+    };
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+    const ok = await syncUserToServer(updated);
+    setPricingSaving(false);
+    setEditFlags(prev => ({ ...prev, pricing: false }));
+    if (ok) {
+      triggerToast(`Pricing saved: ${mode === 'fixed_fee' ? `$${validFee.toFixed(4)}/msg` : 'Direct AI Pass-Through'}`);
+    } else {
+      triggerToast('⚠️ Pricing saved locally (Syncing with server...)');
     }
   };
 
@@ -1315,7 +1336,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 { id: 'balance_history', label: 'Balance', icon: Receipt },
                 { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
                 { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
-                { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
+                { id: 'pricing', label: 'Pricing & Rates', icon: DollarSign },
                 { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
               ].map(tab => {
                 const isActive = activeTab === tab.id;
@@ -2421,96 +2442,90 @@ export default function MasterControlPanel({ onBackToHome }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '20px' }}>
                     <div
-                      onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                      onClick={() => {
+                        setPricingDraft(prev => ({ ...prev, pricingMode: 'fixed_fee' }));
+                        setEditFlags(prev => ({ ...prev, pricing: true }));
+                      }}
                       style={{
-                        background: selectedUser.pricingMode === 'fixed_fee' ? '#ffffff' : '#f8fafc',
-                        border: selectedUser.pricingMode === 'fixed_fee' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                        background: pricingDraft.pricingMode === 'fixed_fee' ? '#ffffff' : '#f8fafc',
+                        border: pricingDraft.pricingMode === 'fixed_fee' ? '2px solid #0f172a' : '1px solid #e2e8f0',
                         borderRadius: '12px',
                         padding: '16px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
                       }}
                     >
-                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                        Fixed Flat Fee
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>
+                          Fixed Flat Fee (Recommended)
+                        </span>
+                        {pricingDraft.pricingMode === 'fixed_fee' && (
+                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>Active</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                        Deduct a fixed dollar rate per auto-reply.
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                        Deduct a fixed flat dollar rate from store balance for each automated customer SMS reply.
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '700' }}>$</span>
+                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>$</span>
                         <input
                           type="number"
                           step="0.001"
-                          value={selectedUser.fixedFeePerMessage || 0.005}
-                          onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                          style={{ ...customInputStyle, width: '90px' }}
+                          min="0"
+                          value={pricingDraft.fixedFeePerMessage}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            setPricingDraft(prev => ({ ...prev, fixedFeePerMessage: e.target.value }));
+                            setEditFlags(prev => ({ ...prev, pricing: true }));
+                          }}
+                          style={{ ...customInputStyle, width: '100px', fontWeight: '700' }}
                         />
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>/ msg</span>
+                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>/ reply</span>
                       </div>
                     </div>
 
                     <div
-                      onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                      onClick={() => {
+                        setPricingDraft(prev => ({ ...prev, pricingMode: 'default_ai' }));
+                        setEditFlags(prev => ({ ...prev, pricing: true }));
+                      }}
                       style={{
-                        background: selectedUser.pricingMode === 'token_custom' ? '#ffffff' : '#f8fafc',
-                        border: selectedUser.pricingMode === 'token_custom' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                        background: pricingDraft.pricingMode === 'default_ai' ? '#ffffff' : '#f8fafc',
+                        border: pricingDraft.pricingMode === 'default_ai' ? '2px solid #0f172a' : '1px solid #e2e8f0',
                         borderRadius: '12px',
                         padding: '16px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
                       }}
                     >
-                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                        Custom Token Rates
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>
+                          Direct AI Pass-Through
+                        </span>
+                        {pricingDraft.pricingMode === 'default_ai' && (
+                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>Active</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                        Bill prompt and reply token markup.
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#64748b' }}>In $/1M:</span>
-                          <input
-                            type="number"
-                            step="0.05"
-                            value={selectedUser.customInputPrice1M || 0.25}
-                            onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
-                            style={{ ...customInputStyle, width: '80px' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#64748b' }}>Out $/1M:</span>
-                          <input
-                            type="number"
-                            step="0.10"
-                            value={selectedUser.customOutputPrice1M || 1.50}
-                            onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
-                            style={{ ...customInputStyle, width: '80px' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
-                      style={{
-                        background: selectedUser.pricingMode === 'default_ai' ? '#ffffff' : '#f8fafc',
-                        border: selectedUser.pricingMode === 'default_ai' ? '2px solid #0f172a' : '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                        Direct AI Pass-Through
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                        Zero markup • Direct supplier cost.
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                        Zero retail markup • Bill exact raw token cost per message to the client.
                       </div>
                       <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
-                        Gemini 2.5 Flash-Lite (${modelRates.GEMINI_25.inPrice} / ${modelRates.GEMINI_25.outPrice})
+                        Gemini 2.5 Flash-Lite (${modelRates.GEMINI_25.inPrice} / ${modelRates.GEMINI_25.outPrice} per 1M)
                       </div>
                     </div>
+                  </div>
+
+                  {/* Save Button for Pricing */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '24px' }}>
+                    <button
+                      onClick={handleSavePricing}
+                      disabled={pricingSaving}
+                      style={{ ...solidPrimaryBtnStyle, opacity: pricingSaving ? 0.7 : 1 }}
+                    >
+                      {pricingSaving ? 'Saving & Syncing...' : 'Save Pricing Settings & Sync to APK'}
+                    </button>
                   </div>
 
                   {/* Section 2: Actual Raw API Usage & Multi-Model Real Cost */}

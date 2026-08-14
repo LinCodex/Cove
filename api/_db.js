@@ -249,9 +249,9 @@ export async function addActivities(storeId, logs) {
     incoming: l.incoming || '',
     reply: l.reply || '',
     status: l.status || 'Sent',
-    tokens_in: l.inputTokens || l.tokensIn || 0,
-    tokens_out: l.outputTokens || l.tokensOut || 0,
-    cost: l.cost || 0
+    tokens_in: parseInt(l.inputTokens ?? l.tokensIn ?? l.tokens_in ?? 0) || 0,
+    tokens_out: parseInt(l.outputTokens ?? l.tokensOut ?? l.tokens_out ?? 0) || 0,
+    cost: parseFloat(l.cost ?? 0) || 0
   }));
 
   // Upsert to avoid duplicate key errors
