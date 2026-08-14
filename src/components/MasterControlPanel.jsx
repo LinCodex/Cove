@@ -187,6 +187,10 @@ export default function MasterControlPanel({ onBackToHome }) {
         aiRules: u.businessProfile?.aiRules || '' 
       });
 
+      const DAY_MAP = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
+      const rawDays = u.spamConfig?.scheduleDays || u.spamConfig?.scheduleActiveDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      const normalizedDays = Array.isArray(rawDays) ? rawDays.map(d => typeof d === 'number' ? (DAY_MAP[d] || d) : d) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
       setSpamDraft(prev => editFlags.spam ? prev : { 
         spamEnabled: u.spamConfig?.spamEnabled ?? true,
         cooldownEnabled: u.spamConfig?.cooldownEnabled ?? true,
@@ -199,7 +203,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         scheduleMode: u.spamConfig?.scheduleMode || 'ONLY_DURING',
         scheduleStart: u.spamConfig?.scheduleStart || '09:00',
         scheduleEnd: u.spamConfig?.scheduleEnd || '18:00',
-        scheduleDays: u.spamConfig?.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        scheduleDays: normalizedDays,
         outOfHoursMsg: u.spamConfig?.outOfHoursMsg || 'Thanks for contacting us! We are currently closed.'
       });
 
