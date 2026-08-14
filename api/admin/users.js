@@ -1,4 +1,4 @@
-import { getAllUsers, getUser, saveUser, createUser, deleteUser, parseBody } from '../_db.js';
+import { getAllUsers, getUser, saveUser, createUser, deleteUser, parseBody, applyBalanceChange } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -32,6 +32,18 @@ export default async function handler(req, res) {
       if (action === 'delete_user' && data.id) {
         await deleteUser(data.id);
         return res.status(200).json({ success: true, deletedId: data.id });
+      }
+
+      if ((action === 'adjust_balance' || action === 'set_balance') && data.id) {
+        const user = await applyBalanceChange(data.id, {
+          delta: action === 'adjust_balance' ? data.delta : null,
+          absolute: action === 'set_balance' ? data.balance : null,
+          reason: data.reason || ''
+        });
+        if (!user) {
+          return res.status(400).json({ error: 'Failed to update store balance' });
+        }
+        return res.status(200).json({ success: true, user });
       }
 
       if (action === 'create_user' || req.body?.isNewUser) {

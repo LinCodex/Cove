@@ -322,10 +322,11 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   const syncUserToServer = async (updatedUserData) => {
     try {
+      const { balance, balanceHistory, status, ...configData } = updatedUserData || {};
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_user', data: updatedUserData })
+        body: JSON.stringify({ action: 'update_user', data: configData })
       });
       const resData = await res.json().catch(() => ({}));
       if (res.ok && resData.success !== false) {
@@ -337,6 +338,78 @@ export default function MasterControlPanel({ onBackToHome }) {
     } catch (e) {
       console.error('Failed to sync to server:', e);
       return false;
+    }
+  };
+
+  const applyServerUser = (serverUser) => {
+    if (!serverUser?.id) return;
+    setUsers(prev => prev.map(u => u.id === serverUser.id ? { ...u, ...serverUser } : u));
+  };
+
+  const handleUpdateBalance = async (delta, customReason = '') => {
+    if (!selectedUser) return;
+    const numericDelta = parseFloat(delta);
+    if (!Number.isFinite(numericDelta) || numericDelta === 0) return;
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'adjust_balance',
+          data: { id: selectedUser.id, delta: numericDelta, reason: customReason }
+        })
+      });
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok || !resData.user) {
+        triggerToast(resData.error || 'Failed to update balance');
+        return;
+      }
+      applyServerUser(resData.user);
+      const nextBal = parseFloat(resData.user.balance) || 0;
+      triggerToast(`Balance: ${numericDelta >= 0 ? '+' : ''}$${numericDelta.toFixed(2)} (New: $${nextBal.toFixed(2)})`);
+    } catch (e) {
+      console.error('Failed to update balance:', e);
+      triggerToast('Failed to update balance');
+    }
+  };
+
+  const handleSetZeroBalance = async () => {
+    if (!selectedUser) return;
+    await handleSetExactBalance(0, 'Reset balance to $0.00');
+  };
+
+  const handleSetExactBalance = async (amount, customReason = '') => {
+    if (!selectedUser) return;
+    const val = parseFloat(amount);
+    if (!Number.isFinite(val) || val < 0) return;
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set_balance',
+          data: {
+            id: selectedUser.id,
+            balance: val,
+            reason: customReason || `Balance set to $${val.toFixed(2)}`
+          }
+        })
+      });
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok || !resData.user) {
+        triggerToast(resData.error || 'Failed to set balance');
+        return;
+      }
+      applyServerUser(resData.user);
+      triggerToast(val <= 0
+        ? 'Store balance reset to $0.00 (Auto-reply paused)'
+        : `Balance set to $${val.toFixed(2)}`
+      );
+    } catch (e) {
+      console.error('Failed to set balance:', e);
+      triggerToast('Failed to set balance');
     }
   };
 
@@ -461,61 +534,6 @@ export default function MasterControlPanel({ onBackToHome }) {
       setLoading(false);
     }
   };
-
-  const handleUpdateBalance = (delta, customReason = '') => {
-    if (!selectedUser) return;
-    const currentBal = parseFloat(selectedUser.balance) || 0;
-    const nextBal = Math.max(0, currentBal + delta);
-    const newTx = {
-      id: Date.now(),
-      timestampMillis: Date.now(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      date: new Date().toLocaleDateString(),
-      type: delta > 0 ? 'Top-Up' : 'Manual Adjustment',
-      amount: delta,
-      balanceAfter: nextBal,
-      description: customReason || (delta > 0 ? `Admin Top-Up +$${delta.toFixed(2)}` : `Admin Deduction -$${Math.abs(delta).toFixed(2)}`)
-    };
-
-    const updatedHistory = [newTx, ...(selectedUser.balanceHistory || [])].slice(0, 200);
-    const updated = {
-      ...selectedUser,
-      balance: nextBal,
-      status: nextBal <= 0 ? 'Paused (Zero Balance)' : 'Active',
-      balanceHistory: updatedHistory
-    };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
-    triggerToast(`Balance: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)} (New: $${nextBal.toFixed(2)})`);
-  };
-
-  const handleSetZeroBalance = () => {
-    if (!selectedUser) return;
-    const currentBal = parseFloat(selectedUser.balance) || 0;
-    const delta = -currentBal;
-    const newTx = {
-      id: Date.now(),
-      timestampMillis: Date.now(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      date: new Date().toLocaleDateString(),
-      type: 'Manual Adjustment',
-      amount: delta,
-      balanceAfter: 0.00,
-      description: 'Reset balance to $0.00'
-    };
-    const updatedHistory = [newTx, ...(selectedUser.balanceHistory || [])].slice(0, 200);
-    const updated = {
-      ...selectedUser,
-      balance: 0.000,
-      status: 'Paused (Zero Balance)',
-      balanceHistory: updatedHistory
-    };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
-    triggerToast(`Store balance reset to $0.00 (Auto-reply paused)`);
-  };
-
-
 
   const handleOpenPricingModal = () => {
     setTempModelRates(JSON.parse(JSON.stringify(modelRates)));
@@ -1275,16 +1293,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <button
                     onClick={() => {
                       const val = parseFloat(customBalInput);
-                      if (!isNaN(val) && val >= 0) {
-                        const updated = {
-                          ...selectedUser,
-                          balance: val,
-                          status: val <= 0 ? 'Paused (Zero Balance)' : 'Active'
-                        };
-                        setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-                        syncUserToServer(updated);
-                        triggerToast(`Balance set to $${val.toFixed(2)}`);
-                      }
+                      if (!isNaN(val) && val >= 0) handleSetExactBalance(val);
                     }}
                     style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#0f172a' }}
                     title="Set balance to exact amount"

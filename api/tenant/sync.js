@@ -1,4 +1,4 @@
-import { getUser, saveUser, addActivities, getActivities, parseBody } from '../_db.js';
+import { getUser, patchUser, addActivities, getActivities, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -28,26 +28,34 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { recentLogs, recentTx, businessProfile, spamConfig, aiConfig, blacklist, storeName, phone, clientEdited } = body;
+      let wroteStoreRow = false;
 
-      // 1. Only update store settings when APK explicitly sends an intentional edit
+      // 1. Only update store settings when APK explicitly sends an intentional edit.
+      //    Never write balance on this path — a full-row save was overwriting admin top-ups.
       if (clientEdited === true) {
+        const configPatch = {};
         if (businessProfile && typeof businessProfile === 'object') {
-          user.businessProfile = { ...(user.businessProfile || {}), ...businessProfile };
+          configPatch.businessProfile = { ...(user.businessProfile || {}), ...businessProfile };
         }
         if (spamConfig && typeof spamConfig === 'object') {
-          user.spamConfig = { ...(user.spamConfig || {}), ...spamConfig };
+          configPatch.spamConfig = { ...(user.spamConfig || {}), ...spamConfig };
         }
         if (aiConfig && typeof aiConfig === 'object') {
-          user.aiConfig = { ...(user.aiConfig || {}), ...aiConfig };
+          configPatch.aiConfig = { ...(user.aiConfig || {}), ...aiConfig };
         }
         if (Array.isArray(blacklist)) {
-          user.blacklist = blacklist;
+          configPatch.blacklist = blacklist;
         }
         if (storeName && typeof storeName === 'string') {
-          user.storeName = storeName.trim();
+          configPatch.storeName = storeName.trim();
         }
         if (phone && typeof phone === 'string') {
-          user.phone = phone.trim();
+          configPatch.phone = phone.trim();
+        }
+        if (Object.keys(configPatch).length > 0) {
+          const patched = await patchUser(user.id, configPatch, { includeBalance: false });
+          if (patched) user = patched;
+          wroteStoreRow = true;
         }
       }
 
@@ -56,46 +64,55 @@ export default async function handler(req, res) {
         await addActivities(user.id, recentLogs);
       }
 
-      // 3. If APK reports recent balance transactions, merge them into store history and deduct
+      // 3. Apply only NEW SMS deductions. Ignore echoed admin top-ups (positive amounts)
+      //    and re-read first so we never add deductions onto a stale pre-top-up snapshot.
       if (Array.isArray(recentTx) && recentTx.length > 0) {
-        const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
-        const newTx = recentTx.filter(t => !existingIds.has(String(t.id)));
+        const latest = await getUser(userId);
+        if (latest) user = latest;
 
-        if (newTx.length > 0) {
-          const sortedNewTx = [...newTx].sort((a, b) => (a.timestampMillis || 0) - (b.timestampMillis || 0));
+        const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
+        const newDeductions = recentTx.filter(t => {
+          const amt = parseFloat(t.amount);
+          return Number.isFinite(amt) && amt < 0 && !existingIds.has(String(t.id));
+        });
+
+        if (newDeductions.length > 0) {
+          const sortedNewTx = [...newDeductions].sort((a, b) => (a.timestampMillis || 0) - (b.timestampMillis || 0));
           const formattedNewTx = [];
+          let nextBal = Number.isFinite(parseFloat(user.balance)) ? parseFloat(user.balance) : 0;
 
           for (const t of sortedNewTx) {
-            const amt = parseFloat(t.amount) || 0;
-            user.balance = Math.max(0, user.balance + amt);
-            user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : (user.forcedPause ? 'Force Paused' : 'Active');
+            const amt = parseFloat(t.amount);
+            nextBal = Math.max(0, nextBal + amt);
 
             formattedNewTx.unshift({
               id: t.id || Date.now(),
               timestampMillis: t.timestampMillis || Date.now(),
               time: new Date(t.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               date: new Date(t.timestampMillis || Date.now()).toLocaleDateString(),
-              type: amt >= 0 ? 'Top-Up' : 'SMS Reply',
+              type: 'SMS Reply',
               amount: amt,
-              balanceAfter: user.balance,
+              balanceAfter: nextBal,
               description: t.description || (t.recipientNumber ? `SMS reply to ${t.recipientNumber}` : 'Auto-reply SMS')
             });
           }
 
-          user.balanceHistory = [...formattedNewTx, ...(user.balanceHistory || [])].slice(0, 200);
+          const patched = await patchUser(user.id, {
+            balance: nextBal,
+            status: user.forcedPause ? 'Force Paused' : (nextBal <= 0 ? 'Paused (Zero Balance)' : 'Active'),
+            balanceHistory: [...formattedNewTx, ...(user.balanceHistory || [])].slice(0, 200)
+          }, { includeBalance: true });
+          if (patched) user = patched;
+          wroteStoreRow = true;
         }
       }
 
-      // 4. Safely reconcile client balance
-      if (body.currentBalance != null && !isNaN(parseFloat(body.currentBalance))) {
-        const apkBalance = parseFloat(body.currentBalance);
-        if (apkBalance < user.balance) {
-          user.balance = Math.max(0, apkBalance);
-          user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : (user.forcedPause ? 'Force Paused' : 'Active');
-        }
+      if (!wroteStoreRow) {
+        await patchUser(user.id, {}, { includeBalance: false });
       }
 
-      await saveUser(user);
+      const fresh = await getUser(userId);
+      if (fresh) user = fresh;
     }
 
     // Load recent activities for this store

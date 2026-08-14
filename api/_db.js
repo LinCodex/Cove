@@ -27,8 +27,12 @@ function rowToUser(row) {
     storeName: row.store_name,
     phone: row.phone || '',
     address: row.address || '',
-    balance: parseFloat(row.balance),
-    status: row.status,
+    balance: Number.isFinite(parseFloat(row.balance)) ? parseFloat(row.balance) : 0,
+    status: Boolean(row.forced_pause)
+      ? 'Force Paused'
+      : ((Number.isFinite(parseFloat(row.balance)) ? parseFloat(row.balance) : 0) <= 0
+        ? 'Paused (Zero Balance)'
+        : 'Active'),
     pricingMode: row.pricing_mode,
     fixedFeePerMessage: parseFloat(row.fixed_fee_per_message),
     customInputPrice1M: parseFloat(row.custom_input_price_1m),
@@ -47,16 +51,33 @@ function rowToUser(row) {
   };
 }
 
-/** Convert API/frontend user object into Supabase row shape. */
-function userToRow(user) {
+function derivedStatus(balance, forcedPause) {
+  if (forcedPause) return 'Force Paused';
+  return (parseFloat(balance) || 0) <= 0 ? 'Paused (Zero Balance)' : 'Active';
+}
+
+/**
+ * Convert API/frontend user object into Supabase row shape.
+ * Balance columns are omitted unless includeBalance is true, so config saves
+ * cannot clobber a concurrent admin top-up or SMS deduction.
+ */
+function userToRow(user, { includeBalance = true } = {}) {
   const row = {};
   if (user.id != null) row.id = user.id;
   if (user.password != null) row.password = user.password;
   if (user.storeName != null || user.store_name != null) row.store_name = user.storeName ?? user.store_name;
   if (user.phone != null) row.phone = user.phone;
   if (user.address != null) row.address = user.address;
-  if (user.balance != null) row.balance = parseFloat(user.balance) || 0;
-  if (user.status != null) row.status = user.status;
+  if (includeBalance) {
+    if (user.balance != null && user.balance !== '') {
+      const n = parseFloat(user.balance);
+      if (Number.isFinite(n)) row.balance = n;
+    }
+    if (user.status != null) row.status = user.status;
+    if (user.balanceHistory != null || user.balance_history != null) {
+      row.balance_history = user.balanceHistory ?? user.balance_history;
+    }
+  }
   if (user.forcedPause != null) row.forced_pause = Boolean(user.forcedPause);
   if (user.pricingMode != null || user.pricing_mode != null) row.pricing_mode = user.pricingMode ?? user.pricing_mode;
   if (user.fixedFeePerMessage != null || user.fixed_fee_per_message != null) row.fixed_fee_per_message = parseFloat(user.fixedFeePerMessage ?? user.fixed_fee_per_message) || 0.0050;
@@ -67,7 +88,6 @@ function userToRow(user) {
   if (user.spamConfig != null || user.spam_config != null) row.spam_config = user.spamConfig ?? user.spam_config;
   if (user.aiConfig != null || user.ai_config != null) row.ai_config = user.aiConfig ?? user.ai_config;
   if (user.blacklist != null) row.blacklist = user.blacklist;
-  if (user.balanceHistory != null || user.balance_history != null) row.balance_history = user.balanceHistory ?? user.balance_history;
   row.last_active = new Date().toISOString();
   return row;
 }
@@ -125,7 +145,9 @@ export async function saveUser(user, oldId = null) {
   if (!user || (!user.id && !oldId)) return false;
   const targetId = (oldId || user.id).trim();
   const newId = user.id ? user.id.trim() : targetId;
-  const row = userToRow(user);
+  // Config-only: never write balance/ledger from a full-row snapshot.
+  // Admin top-ups and SMS deductions go through patchUser/applyBalanceChange.
+  const row = userToRow(user, { includeBalance: false });
 
   if (oldId && oldId.trim() !== newId) {
     // ID rename
@@ -152,13 +174,85 @@ export async function saveUser(user, oldId = null) {
   }
 
   delete row.id; // don't update PK if unchanged
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('stores')
     .update(row)
-    .eq('id', targetId);
+    .eq('id', targetId)
+    .select('id');
 
   if (error) { console.error('saveUser error:', error); return false; }
+  if (!data || data.length === 0) {
+    console.error('saveUser updated 0 rows for', targetId);
+    return false;
+  }
   return true;
+}
+
+/**
+ * Partial update. Pass includeBalance: true only when the caller is intentionally
+ * changing funds (admin top-up / SMS deduction). Config sync must leave balance alone.
+ */
+export async function patchUser(userId, partial, { includeBalance = false } = {}) {
+  if (!userId || !partial) return null;
+  const row = userToRow(partial, { includeBalance });
+  delete row.id;
+
+  const { data, error } = await supabase
+    .from('stores')
+    .update(row)
+    .eq('id', String(userId).trim())
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('patchUser error:', error);
+    return null;
+  }
+  return data ? rowToUser(data) : null;
+}
+
+export async function applyBalanceChange(userId, { delta = null, absolute = null, reason = '' } = {}) {
+  const user = await getUser(userId);
+  if (!user) return null;
+
+  const current = Number.isFinite(parseFloat(user.balance)) ? parseFloat(user.balance) : 0;
+  let nextBal;
+  let appliedDelta;
+
+  if (absolute != null && absolute !== '') {
+    nextBal = Math.max(0, parseFloat(absolute));
+    if (!Number.isFinite(nextBal)) return null;
+    appliedDelta = nextBal - current;
+  } else {
+    appliedDelta = parseFloat(delta);
+    if (!Number.isFinite(appliedDelta)) return null;
+    nextBal = Math.max(0, current + appliedDelta);
+  }
+
+  const description = reason || (
+    appliedDelta > 0
+      ? `Admin Top-Up +$${appliedDelta.toFixed(2)}`
+      : appliedDelta < 0
+        ? `Admin Deduction -$${Math.abs(appliedDelta).toFixed(2)}`
+        : `Balance set to $${nextBal.toFixed(2)}`
+  );
+
+  const newTx = {
+    id: Date.now(),
+    timestampMillis: Date.now(),
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: new Date().toLocaleDateString(),
+    type: appliedDelta > 0 ? 'Top-Up' : 'Manual Adjustment',
+    amount: appliedDelta,
+    balanceAfter: nextBal,
+    description
+  };
+
+  return patchUser(user.id, {
+    balance: nextBal,
+    status: derivedStatus(nextBal, user.forcedPause),
+    balanceHistory: [newTx, ...(user.balanceHistory || [])].slice(0, 200)
+  }, { includeBalance: true });
 }
 
 export async function createUser(userData) {
