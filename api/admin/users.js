@@ -46,16 +46,16 @@ export default async function handler(req, res) {
         return res.status(201).json({ success: true, user: newUser });
       }
 
-      if (data.id) {
+      if (data.id || data.oldId) {
         // Update existing user
-        let user = await getUser(data.id);
+        const targetId = data.oldId || data.id;
+        let user = await getUser(targetId);
         if (!user) {
           user = await createUser(data);
         } else {
           user = { ...user, ...data };
-          await saveUser(user);
-          // Re-read to get the canonical row
-          user = await getUser(data.id);
+          await saveUser(user, data.oldId);
+          user = await getUser(data.id || targetId);
         }
         return res.status(200).json({ success: true, user });
       }

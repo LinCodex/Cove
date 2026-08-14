@@ -103,6 +103,8 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   // Draft States for current store
   const [profileDraft, setProfileDraft] = useState({ 
+    userId: '',
+    password: '',
     storeName: '', 
     phone: '', 
     address: '', 
@@ -135,6 +137,8 @@ export default function MasterControlPanel({ onBackToHome }) {
     const u = users.find(usr => usr.id === selectedUserId);
     if (u) {
       setProfileDraft(prev => editFlags.profile ? prev : { 
+        userId: u.id,
+        password: u.password || '',
         storeName: u.storeName || u.id, 
         phone: u.phone || '', 
         address: u.address || '', 
@@ -440,8 +444,19 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   const handleSaveProfile = () => {
     if (!selectedUser) return;
+    const oldId = selectedUser.id;
+    const newId = (profileDraft.userId || selectedUser.id).trim();
+    const newPass = (profileDraft.password || selectedUser.password).trim();
+
+    if (!newId || !newPass) {
+      triggerToast('Error: User ID and Password cannot be empty');
+      return;
+    }
+
     const updated = { 
       ...selectedUser, 
+      id: newId,
+      password: newPass,
       storeName: profileDraft.storeName,
       phone: profileDraft.phone,
       address: profileDraft.address,
@@ -452,10 +467,18 @@ export default function MasterControlPanel({ onBackToHome }) {
         aiRules: profileDraft.aiRules
       }
     };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+
+    if (newId !== oldId) {
+      updated.oldId = oldId;
+    }
+
+    setUsers(prev => prev.map(u => u.id === oldId ? updated : u));
+    if (newId !== oldId) {
+      setSelectedUserId(newId);
+    }
     syncUserToServer(updated);
     setEditFlags(prev => ({ ...prev, profile: false }));
-    triggerToast('Store Profile & AI FAQ saved and synced!');
+    triggerToast('Store Profile & Login Credentials saved and synced!');
   };
 
   const handleSaveSpamSchedule = () => {
@@ -646,19 +669,8 @@ export default function MasterControlPanel({ onBackToHome }) {
       }}>
         {/* Sidebar Header */}
         <div style={{ padding: '20px 16px 14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #1d61ff 0%, #3b82f6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Sparkles size={16} color="#ffffff" />
-            </div>
-            <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+          <div style={{ marginBottom: '14px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.3px' }}>
               Cove Control
             </span>
           </div>
@@ -690,7 +702,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             />
           </div>
 
-          {/* + New Store Button */}
+          {/* New Store Button */}
           <button
             onClick={() => setShowCreateModal(true)}
             style={{
@@ -710,7 +722,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             }}
           >
             <Plus size={14} />
-            <span>+ Create Store Account</span>
+            <span>Create Store Account</span>
           </button>
         </div>
 
@@ -1072,9 +1084,75 @@ export default function MasterControlPanel({ onBackToHome }) {
             {/* ─── TAB 1: STORE PROFILE & AI FAQ ─── */}
             {activeTab === 'profile' && (
               <div style={cardSectionStyle}>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
-                  Store Profile & AI FAQ Knowledge
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      Store Profile & Account Credentials
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                      Configure login credentials, store identity, and AI FAQ knowledge.
+                    </p>
+                  </div>
+                  <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
+                    Save Store Profile & Credentials
+                  </button>
+                </div>
+
+                {/* Store Account Credentials (APK Login) */}
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <User size={14} color="#0f172a" />
+                    <span>Store Login Credentials (On-Device APK)</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={formLabelStyle}>Store User ID (Login Username)</label>
+                      <input
+                        type="text"
+                        value={profileDraft.userId || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, profile: true }));
+                          setProfileDraft(prev => ({ ...prev, userId: e.target.value }));
+                        }}
+                        placeholder="e.g. store_downtown_01"
+                        style={customInputStyle}
+                      />
+                      <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'block' }}>Account identifier used for APK login</span>
+                    </div>
+
+                    <div>
+                      <label style={formLabelStyle}>APK Password</label>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type={showPasswordMap['draft_pass'] ? 'text' : 'password'}
+                          value={profileDraft.password || ''}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, profile: true }));
+                            setProfileDraft(prev => ({ ...prev, password: e.target.value }));
+                          }}
+                          placeholder="Password..."
+                          style={{ ...customInputStyle, paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordMap(prev => ({ ...prev, draft_pass: !prev['draft_pass'] }))}
+                          style={{
+                            position: 'absolute',
+                            right: '10px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#94a3b8'
+                          }}
+                        >
+                          {showPasswordMap['draft_pass'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'block' }}>Store owner password for APK authentication</span>
+                    </div>
+                  </div>
+                </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                   <div>

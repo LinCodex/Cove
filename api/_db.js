@@ -37,6 +37,7 @@ function rowToUser(row) {
     lastActive: new Date(row.last_active).getTime(),
     businessProfile: row.business_profile || {},
     spamConfig: row.spam_config || {},
+    aiConfig: row.ai_config || {},
     blacklist: row.blacklist || [],
     activities: [],  // loaded separately when needed
     createdAt: row.created_at,
@@ -61,6 +62,7 @@ function userToRow(user) {
   if (user.totalRequests != null || user.total_requests != null) row.total_requests = parseInt(user.totalRequests ?? user.total_requests) || 0;
   if (user.businessProfile != null || user.business_profile != null) row.business_profile = user.businessProfile ?? user.business_profile;
   if (user.spamConfig != null || user.spam_config != null) row.spam_config = user.spamConfig ?? user.spam_config;
+  if (user.aiConfig != null || user.ai_config != null) row.ai_config = user.aiConfig ?? user.ai_config;
   if (user.blacklist != null) row.blacklist = user.blacklist;
   row.last_active = new Date().toISOString();
   return row;
@@ -115,16 +117,29 @@ export async function getUser(userId) {
   return rowToUser(data);
 }
 
-export async function saveUser(user) {
-  if (!user || !user.id) return false;
-  const cleanId = user.id.trim();
+export async function saveUser(user, oldId = null) {
+  if (!user || (!user.id && !oldId)) return false;
+  const targetId = (oldId || user.id).trim();
+  const newId = user.id ? user.id.trim() : targetId;
   const row = userToRow(user);
-  delete row.id; // don't update PK
 
+  if (oldId && oldId.trim() !== newId) {
+    // ID rename
+    row.id = newId;
+    const { error } = await supabase
+      .from('stores')
+      .update(row)
+      .eq('id', oldId.trim());
+    if (error) { console.error('renameUser error:', error); return false; }
+    await supabase.from('activities').update({ store_id: newId }).eq('store_id', oldId.trim());
+    return true;
+  }
+
+  delete row.id; // don't update PK if unchanged
   const { error } = await supabase
     .from('stores')
     .update(row)
-    .eq('id', cleanId);
+    .eq('id', targetId);
 
   if (error) { console.error('saveUser error:', error); return false; }
   return true;
