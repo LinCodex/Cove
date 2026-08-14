@@ -2392,6 +2392,18 @@ html, body {
 /* =========================================
    COMPREHENSIVE MOBILE OVERFLOW GUARDS
    ========================================= */
+@media (max-width: 1100px) {
+  .elite-row-top {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .elite-row-bottom {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media (max-width: 768px) {
   html, body {
     overflow-x: hidden !important;
@@ -2408,6 +2420,12 @@ html, body {
     box-sizing: border-box !important;
   }
 
+  .ambient-blob {
+    opacity: 0.4 !important;
+    filter: blur(80px) !important;
+    transform: scale(0.6) !important;
+  }
+
   .elite-container {
     width: 100% !important;
     max-width: 100% !important;
@@ -2421,6 +2439,7 @@ html, body {
     padding: 1.25rem 1rem !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .hero-main-card {
@@ -2428,39 +2447,148 @@ html, body {
     min-height: auto !important;
   }
 
+  .card-top-nav {
+    margin-bottom: 1.5rem !important;
+  }
+
   .hero-big-title {
     font-size: 1.85rem !important;
     line-height: 1.15 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .hero-desc {
+    font-size: 0.875rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .hero-cta-row {
+    width: 100% !important;
+  }
+
+  .btn-elite-blue {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0.75rem 1.5rem !important;
+  }
+
+  .scroll-indicator {
+    display: none !important;
   }
 
   .section-card-title {
-    font-size: 1.45rem !important;
+    font-size: 1.35rem !important;
+    line-height: 1.2 !important;
   }
 
+  .section-card-desc {
+    font-size: 0.85rem !important;
+  }
+
+  /* 3D Phone Cluster Mobile Stacking */
   .hero-phones-cluster {
-    height: 280px !important;
-    max-width: 100% !important;
-    transform: scale(0.75) !important;
-    transform-origin: center center !important;
-    margin: 0 auto !important;
-  }
-
-  .comparison-table-wrapper {
+    height: 350px !important;
     width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    margin: 0 -0.5rem !important;
-    padding: 0 0.5rem !important;
+    max-width: 320px !important;
+    margin: 1rem auto 0 auto !important;
+    position: relative !important;
+    overflow: visible !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  .comparison-table {
-    min-width: 480px !important;
+  .hero-phones-cluster .phone-device {
+    width: 155px !important;
+    height: 310px !important;
+    border-width: 4px !important;
   }
 
-  .specs-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
+  .hero-phones-cluster .phone-left {
+    left: -8px !important;
+    transform: perspective(600px) rotateY(16deg) scale(0.82) !important;
+    opacity: 0.65 !important;
+    z-index: 1 !important;
+  }
+
+  .hero-phones-cluster .phone-right {
+    right: -8px !important;
+    left: auto !important;
+    transform: perspective(600px) rotateY(-16deg) scale(0.82) !important;
+    opacity: 0.65 !important;
+    z-index: 1 !important;
+  }
+
+  .hero-phones-cluster .phone-center {
+    left: 50% !important;
+    transform: translateX(-50%) scale(1) !important;
+    z-index: 5 !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(29, 97, 255, 0.3) !important;
+  }
+
+  /* Top Stats Card */
+  .stats-main-card {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .stats-giant-number {
+    font-size: 3rem !important;
+  }
+
+  .stats-card-footer {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .stat-footer-val {
+    font-size: 0.95rem !important;
+  }
+
+  /* Bottom Wallet Card */
+  .bottom-card-wallet {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .deposit-tiers-box {
+    padding: 1rem !important;
+  }
+
+  .tier-buttons-row {
+    gap: 0.35rem !important;
+  }
+
+  .tier-btn {
+    font-size: 0.75rem !important;
+    padding: 0.45rem 0 !important;
+  }
+
+  .wallet-mockup-panel {
+    padding: 1rem !important;
+  }
+
+  /* Bottom Use Cases Card */
+  .bottom-card-usecases {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .usecase-detail-panel {
+    padding: 1rem !important;
+  }
+
+  /* Simulator Card */
+  .simulator-full-card {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .simulator-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .simulator-wallet-badge {
+    width: 100% !important;
+    justify-content: space-between !important;
   }
 
   .simulator-main-grid {
@@ -2468,12 +2596,109 @@ html, body {
     gap: 1rem !important;
   }
 
-  .cta-badge-strip {
-    flex-direction: column !important;
-    align-items: center !important;
+  .sim-terminal-frame {
+    height: 420px !important;
+  }
+
+  .sim-terminal-input-bar {
+    padding: 0.65rem 0.85rem !important;
     gap: 0.5rem !important;
   }
 
+  .sim-input {
+    font-size: 0.8rem !important;
+    padding: 0.55rem 0.75rem !important;
+    min-width: 0 !important;
+  }
+
+  .btn-sim-send {
+    padding: 0.55rem 0.9rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Comparison Card */
+  .comparison-full-card {
+    padding: 1.25rem 1rem !important;
+    overflow: hidden !important;
+  }
+
+  .comparison-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+  }
+
+  .comparison-table {
+    min-width: 440px !important;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 0.75rem 0.65rem !important;
+    font-size: 0.775rem !important;
+  }
+
+  /* Tech Specs Card */
+  .specs-full-card {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .specs-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* FAQ Card */
+  .faq-full-card {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .faq-question-btn {
+    padding: 1rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .faq-answer-body {
+    padding: 0 1rem 1rem 1rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Bottom CTA Card */
+  .bottom-cta-card {
+    padding: 2rem 1rem !important;
+  }
+
+  .cta-title {
+    font-size: 1.65rem !important;
+  }
+
+  .cta-desc {
+    font-size: 0.85rem !important;
+  }
+
+  .cta-features-strip {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .cta-strip-item {
+    width: 100% !important;
+    max-width: 280px !important;
+    justify-content: center !important;
+    font-size: 0.8rem !important;
+  }
+
+  .btn-large-cta {
+    width: 100% !important;
+    font-size: 0.925rem !important;
+    padding: 0.85rem 1.5rem !important;
+  }
+
+  /* Footer Card */
   .footer-card {
     padding: 1.5rem 1rem !important;
   }
@@ -2482,22 +2707,57 @@ html, body {
     grid-template-columns: 1fr !important;
     gap: 1.5rem !important;
   }
+
+  .footer-bottom-row {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 0.75rem !important;
+  }
+
+  .footer-badges {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+  }
+
+  .badge-sep {
+    display: none !important;
+  }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .hero-phones-cluster {
-    height: 240px !important;
-    transform: scale(0.65) !important;
+    height: 330px !important;
+    max-width: 220px !important;
+  }
+
+  .hero-phones-cluster .phone-left,
+  .hero-phones-cluster .phone-right {
+    display: none !important;
+  }
+
+  .hero-phones-cluster .phone-center {
+    position: relative !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    width: 175px !important;
+    height: 330px !important;
   }
   
   .hero-big-title {
-    font-size: 1.6rem !important;
+    font-size: 1.55rem !important;
   }
 
-  .btn-elite-blue {
-    padding: 0.7rem 1.4rem !important;
-    font-size: 0.85rem !important;
-    width: 100% !important;
+  .stats-giant-number {
+    font-size: 2.5rem !important;
+  }
+
+  .stats-card-footer {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+    text-align: center !important;
   }
 }
 
