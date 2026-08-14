@@ -1,49 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Shield, 
   Plus, 
-  Lock, 
   Search, 
   DollarSign, 
   MessageSquare, 
-  Sliders, 
   Clock, 
   Ban, 
   Trash2, 
-  Eye, 
-  EyeOff, 
   ArrowLeft, 
   Check, 
   AlertCircle,
-  Hash,
   Sparkles,
   Phone,
   MapPin,
   RefreshCw,
   SlidersHorizontal,
   ChevronRight,
-  ChevronDown,
   User,
   Activity,
-  LayoutDashboard,
-  Inbox,
-  Calendar,
-  BarChart2,
-  BookOpen,
-  Headphones,
   Users,
-  TrendingUp,
   Settings,
   Download,
-  Filter,
   MoreVertical,
-  Mail,
-  ExternalLink,
-  ChevronLeft,
-  Flame,
   CheckCircle2,
   X,
-  Menu
+  FileText,
+  ShieldCheck,
+  Zap,
+  Sliders
 } from 'lucide-react';
 
 export default function MasterControlPanel({ onBackToHome }) {
@@ -56,21 +40,20 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation and UI State
-  const [navSection, setNavSection] = useState('leads'); // 'leads', 'dashboard', 'inbox', 'analytics', 'settings'
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'activity', 'pricing', 'profile', 'spam_schedule', 'blacklist'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'activity', 'spam_schedule', 'pricing', 'blacklist'
   const [searchQuery, setSearchQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState('all');
   const [saveToast, setSaveToast] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPasswordMap, setShowPasswordMap] = useState({});
   const [loading, setLoading] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // New User Form State
   const [newUserId, setNewUserId] = useState('');
   const [newUserPass, setNewUserPass] = useState('');
   const [newStoreName, setNewStoreName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newAddress, setNewAddress] = useState('');
   const [newInitialBal, setNewInitialBal] = useState('10.00');
   const [newFixedFee, setNewFixedFee] = useState('0.0050');
   const [createError, setCreateError] = useState('');
@@ -78,26 +61,29 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
 
-  // Draft States for editing
-  const [storeInfoDraft, setStoreInfoDraft] = useState({ storeName: '', phone: '', address: '' });
-  const [profileDraft, setProfileDraft] = useState({ businessName: '', businessInfo: '', replyTone: '', aiRules: '' });
+  // Draft States for current store
+  const [profileDraft, setProfileDraft] = useState({ 
+    storeName: '', 
+    phone: '', 
+    address: '', 
+    businessInfo: '', 
+    replyTone: '', 
+    aiRules: '' 
+  });
   const [spamDraft, setSpamDraft] = useState({});
-  const [editFlags, setEditFlags] = useState({ storeInfo: false, profile: false, spam: false });
+  const [editFlags, setEditFlags] = useState({ profile: false, spam: false });
 
   useEffect(() => {
-    setEditFlags({ storeInfo: false, profile: false, spam: false });
+    setEditFlags({ profile: false, spam: false });
   }, [selectedUserId]);
 
   useEffect(() => {
     const u = users.find(usr => usr.id === selectedUserId);
     if (u) {
-      setStoreInfoDraft(prev => editFlags.storeInfo ? prev : { 
+      setProfileDraft(prev => editFlags.profile ? prev : { 
         storeName: u.storeName || u.id, 
         phone: u.phone || '', 
-        address: u.address || '' 
-      });
-      setProfileDraft(prev => editFlags.profile ? prev : { 
-        businessName: u.businessProfile?.businessName || u.storeName || '', 
+        address: u.address || '',
         businessInfo: u.businessProfile?.businessInfo || '', 
         replyTone: u.businessProfile?.replyTone || 'Professional, friendly, and concise', 
         aiRules: u.businessProfile?.aiRules || '' 
@@ -233,7 +219,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         body: JSON.stringify({ action: 'delete_user', data: { id: userId } })
       });
       if (res.ok) {
-        triggerToast(`Store account "${userId}" deleted`);
+        triggerToast(`Store "${userId}" deleted`);
         const remaining = users.filter(u => u.id !== userId);
         setUsers(remaining);
         setSelectedUserId(remaining.length > 0 ? remaining[0].id : '');
@@ -258,6 +244,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         password: newUserPass.trim(),
         storeName: newStoreName.trim() || newUserId.trim(),
         phone: newPhone.trim(),
+        address: newAddress.trim(),
         balance: parseFloat(newInitialBal) || 10.00,
         fixedFeePerMessage: parseFloat(newFixedFee) || 0.0050,
         pricingMode: 'fixed_fee'
@@ -280,6 +267,8 @@ export default function MasterControlPanel({ onBackToHome }) {
         id: payload.id,
         password: payload.password,
         storeName: payload.storeName,
+        phone: payload.phone,
+        address: payload.address,
         balance: payload.balance,
         status: payload.balance <= 0 ? 'Paused (Zero Balance)' : 'Active',
         fixedFeePerMessage: payload.fixedFeePerMessage,
@@ -310,10 +299,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         blacklist: []
       };
 
-      setUsers(prev => {
-        const without = prev.filter(u => u.id !== createdUser.id);
-        return [createdUser, ...without];
-      });
+      setUsers(prev => [createdUser, ...prev.filter(u => u.id !== createdUser.id)]);
       setSelectedUserId(createdUser.id);
 
       triggerToast(`Store "${payload.id}" created successfully!`);
@@ -322,6 +308,7 @@ export default function MasterControlPanel({ onBackToHome }) {
       setNewUserPass('');
       setNewStoreName('');
       setNewPhone('');
+      setNewAddress('');
       fetchUsers();
     } catch (err) {
       setCreateError(err.message || 'Network error');
@@ -371,20 +358,22 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   const handleSaveProfile = () => {
     if (!selectedUser) return;
-    const updated = { ...selectedUser, businessProfile: profileDraft };
+    const updated = { 
+      ...selectedUser, 
+      storeName: profileDraft.storeName,
+      phone: profileDraft.phone,
+      address: profileDraft.address,
+      businessProfile: {
+        businessName: profileDraft.storeName,
+        businessInfo: profileDraft.businessInfo,
+        replyTone: profileDraft.replyTone,
+        aiRules: profileDraft.aiRules
+      }
+    };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
     setEditFlags(prev => ({ ...prev, profile: false }));
-    triggerToast('Store Profile saved and synced!');
-  };
-
-  const handleSaveStoreInfo = () => {
-    if (!selectedUser) return;
-    const updated = { ...selectedUser, ...storeInfoDraft };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
-    setEditFlags(prev => ({ ...prev, storeInfo: false }));
-    triggerToast(`Store info updated`);
+    triggerToast('Store Profile & AI FAQ saved and synced!');
   };
 
   const handleSaveSpamSchedule = () => {
@@ -403,7 +392,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     const updated = { ...selectedUser, blacklist: [...(selectedUser.blacklist || []), clean] };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Blocked number ${clean}`);
+    triggerToast(`Added ${clean} to manual reply list`);
   };
 
   const handleRemoveBlockedNumber = (number) => {
@@ -411,7 +400,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     const updated = { ...selectedUser, blacklist: (selectedUser.blacklist || []).filter(n => n !== number) };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Unblocked number ${number}`);
+    triggerToast(`Removed ${number} from manual reply list`);
   };
 
   const filteredUsers = users.filter(u => 
@@ -419,12 +408,6 @@ export default function MasterControlPanel({ onBackToHome }) {
     (u.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.phone || '').includes(searchQuery)
   );
-
-  // Overall Statistics for KPI Cards
-  const totalStoresCount = users.length;
-  const activeStoresCount = users.filter(u => (u.balance || 0) > 0).length;
-  const totalSmsCount = users.reduce((sum, u) => sum + (u.activities?.length || 0), 0);
-  const totalRevenue = users.reduce((sum, u) => sum + (u.activities?.reduce((s, a) => s + (a.cost || 0), 0) || 0), 0);
 
   // ─── AUTH SCREEN ───
   if (!isAuthenticated) {
@@ -444,62 +427,47 @@ export default function MasterControlPanel({ onBackToHome }) {
           borderRadius: '24px',
           padding: '40px 32px',
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '400px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.04)',
           textAlign: 'center'
         }}>
-          {/* AI Manager Blue Spark Icon */}
           <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '16px',
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
             background: 'linear-gradient(135deg, #1d61ff 0%, #3b82f6 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 20px auto',
-            boxShadow: '0 8px 24px rgba(29, 97, 255, 0.25)'
+            margin: '0 auto 16px auto',
+            boxShadow: '0 8px 20px rgba(29, 97, 255, 0.2)'
           }}>
-            <Sparkles size={26} color="#ffffff" />
+            <Sparkles size={24} color="#ffffff" />
           </div>
 
-          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
-            AI Manager Console
+          <h2 style={{ color: '#0f172a', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0' }}>
+            Cove Master Control
           </h2>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-            Sign in with Master Administrator password to manage store leads and live APK sync.
+          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px 0' }}>
+            Enter Master Administrator password to manage store accounts and live APK sync.
           </p>
 
-          <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="password"
-                placeholder="Enter password..."
-                value={authPassword}
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
-                style={{
-                  width: '100%',
-                  background: '#f8fafc',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  color: '#0f172a',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s ease'
-                }}
-                required
-                autoFocus
-              />
-            </div>
+          <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <input
+              type="password"
+              placeholder="Admin password..."
+              value={authPassword}
+              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
+              style={customInputStyle}
+              required
+              autoFocus
+            />
 
             {authError && (
               <div style={{
                 color: '#dc2626',
                 background: '#fef2f2',
-                border: '1px solid #fee2e2',
-                borderRadius: '10px',
+                borderRadius: '8px',
                 padding: '8px 12px',
                 fontSize: '12px',
                 display: 'flex',
@@ -514,25 +482,9 @@ export default function MasterControlPanel({ onBackToHome }) {
             <button
               type="submit"
               disabled={authLoading}
-              style={{
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '13px',
-                fontWeight: '700',
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.15)',
-                transition: 'transform 0.15s ease, background 0.15s ease'
-              }}
+              style={{ ...solidPrimaryBtnStyle, width: '100%', padding: '12px 0' }}
             >
-              {authLoading ? 'Signing in...' : 'Sign In to Console'}
-              <ChevronRight size={16} />
+              {authLoading ? 'Verifying...' : 'Sign In to Console'}
             </button>
 
             <button
@@ -544,14 +496,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                 color: '#64748b',
                 fontSize: '13px',
                 cursor: 'pointer',
-                marginTop: '6px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
+                marginTop: '4px'
               }}
             >
-              <ArrowLeft size={14} /> Back to Website
+              ← Back to Website
             </button>
           </form>
         </div>
@@ -559,7 +507,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     );
   }
 
-  // ─── AUTHENTICATED DASHBOARD (EXACT REFERENCE UI) ───
+  // ─── MAIN MASTER CONTROL PANEL ───
   return (
     <div style={{
       minHeight: '100vh',
@@ -571,7 +519,7 @@ export default function MasterControlPanel({ onBackToHome }) {
       boxSizing: 'border-box'
     }}>
 
-      {/* ─── TOAST NOTIFICATION ─── */}
+      {/* Toast Notification */}
       {saveToast && (
         <div style={{
           position: 'fixed',
@@ -580,608 +528,246 @@ export default function MasterControlPanel({ onBackToHome }) {
           background: '#0f172a',
           color: '#ffffff',
           padding: '12px 20px',
-          borderRadius: '14px',
+          borderRadius: '12px',
           fontSize: '13px',
           fontWeight: '600',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          zIndex: 1000,
-          animation: 'fadeIn 0.2s ease-out'
+          zIndex: 1000
         }}>
           <CheckCircle2 size={16} color="#10b981" />
           <span>{saveToast}</span>
         </div>
       )}
 
-      {/* ─── LEFT SIDEBAR (EXACT MATCH TO REFERENCE IMAGE) ─── */}
+      {/* ─── SIDEBAR: STORE ACCOUNTS LIST ─── */}
       <aside style={{
-        width: '260px',
+        width: '280px',
         backgroundColor: '#ffffff',
         borderRight: '1px solid #f1f5f9',
-        padding: '24px 16px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
         flexShrink: 0,
-        boxSizing: 'border-box',
-        minHeight: '100vh'
-      }} className="hidden-mobile-sidebar">
-
-        <div>
-          {/* Logo Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', paddingLeft: '4px' }}>
+        minHeight: '100vh',
+        boxSizing: 'border-box'
+      }}>
+        {/* Sidebar Header */}
+        <div style={{ padding: '20px 16px 14px 16px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
               background: 'linear-gradient(135deg, #1d61ff 0%, #3b82f6 100%)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(29, 97, 255, 0.3)'
+              justifyContent: 'center'
             }}>
-              <Sparkles size={18} color="#ffffff" />
+              <Sparkles size={16} color="#ffffff" />
             </div>
-            <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em' }}>
-              AI Manager
+            <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+              Cove Control
             </span>
           </div>
 
-          {/* Quick Search Pill Bar (⌘ S) */}
+          {/* Quick Search Store Input */}
           <div style={{
-            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             background: '#f8fafc',
-            border: '1px solid #f1f5f9',
-            borderRadius: '10px',
-            padding: '8px 12px',
-            marginBottom: '24px'
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            marginBottom: '10px'
           }}>
-            <Search size={14} color="#94a3b8" style={{ marginRight: '8px' }} />
+            <Search size={13} color="#94a3b8" style={{ marginRight: '6px' }} />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search stores..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
-                fontSize: '13px',
+                fontSize: '12px',
                 color: '#0f172a',
                 width: '100%'
               }}
             />
-            <span style={{
-              fontSize: '10px',
-              fontWeight: '700',
-              color: '#94a3b8',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              padding: '2px 5px',
-              borderRadius: '4px'
-            }}>
-              ⌘ S
-            </span>
           </div>
 
-          {/* Nav Section: OVERVIEW */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{
+          {/* + New Store Button */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              width: '100%',
+              background: '#0f172a',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 0',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '11px',
-              fontWeight: '700',
-              color: '#94a3b8',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: '0 8px 8px 8px'
-            }}>
-              <span>Overview</span>
-              <ChevronDown size={14} color="#94a3b8" />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <SidebarNavItem 
-                icon={LayoutDashboard} 
-                label="Dashboard" 
-                active={navSection === 'dashboard'} 
-                onClick={() => setNavSection('dashboard')} 
-              />
-              <SidebarNavItem 
-                icon={Inbox} 
-                label="Inbox" 
-                active={navSection === 'inbox'} 
-                onClick={() => setNavSection('inbox')} 
-              />
-              <SidebarNavItem 
-                icon={Users} 
-                label="Manage Leads" 
-                active={navSection === 'leads'} 
-                onClick={() => setNavSection('leads')} 
-              />
-              <SidebarNavItem 
-                icon={Calendar} 
-                label="Multi-calendar" 
-                active={navSection === 'calendar'} 
-                onClick={() => setNavSection('calendar')} 
-              />
-            </div>
-          </div>
-
-          {/* Nav Section: TOOLS */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '11px',
-              fontWeight: '700',
-              color: '#94a3b8',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: '0 8px 8px 8px'
-            }}>
-              <span>Tools</span>
-              <ChevronDown size={14} color="#94a3b8" />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <SidebarNavItem 
-                icon={BarChart2} 
-                label="Analytics" 
-                active={navSection === 'analytics'} 
-                onClick={() => setNavSection('analytics')} 
-              />
-              <SidebarNavItem 
-                icon={BookOpen} 
-                label="Formation" 
-                active={navSection === 'formation'} 
-                onClick={() => setNavSection('formation')} 
-              />
-              <SidebarNavItem 
-                icon={Headphones} 
-                label="Support" 
-                active={navSection === 'support'} 
-                onClick={() => setNavSection('support')} 
-              />
-            </div>
-          </div>
-
-          {/* Nav Section: MANAGER */}
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '11px',
-              fontWeight: '700',
-              color: '#94a3b8',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: '0 8px 8px 8px'
-            }}>
-              <span>Manager</span>
-              <ChevronDown size={14} color="#94a3b8" />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <SidebarNavItem 
-                icon={User} 
-                label="User" 
-                active={navSection === 'user'} 
-                onClick={() => setNavSection('user')} 
-              />
-              <SidebarNavItem 
-                icon={TrendingUp} 
-                label="Performance" 
-                active={navSection === 'performance'} 
-                onClick={() => setNavSection('performance')} 
-              />
-              <SidebarNavItem 
-                icon={Settings} 
-                label="Settings" 
-                active={navSection === 'settings'} 
-                onClick={() => setNavSection('settings')} 
-              />
-            </div>
-          </div>
-
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Plus size={14} />
+            <span>+ Create Store Account</span>
+          </button>
         </div>
 
-        {/* Bottom Area: Upgrade Card & User Profile */}
-        <div>
-          {/* Upgrade to Pro Card */}
-          <div style={{
-            background: '#fafafa',
-            border: '1px solid #f1f5f9',
-            borderRadius: '16px',
-            padding: '16px',
-            textAlign: 'center',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              <span>Upgrade to Pro</span>
-              <Flame size={14} color="#f97316" />
-            </div>
-            <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-              Get 3 month free and unlock all Pro features
-            </p>
-            <button
-              onClick={() => triggerToast('Pro plan is already enabled for Master Admin!')}
-              style={{
-                width: '100%',
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '8px 0',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              Upgrade
-            </button>
+        {/* Store Accounts List */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', padding: '6px 8px', textTransform: 'uppercase' }}>
+            Store Accounts ({filteredUsers.length})
           </div>
 
-          {/* User Profile Pill */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 4px',
-            borderTop: '1px solid #f1f5f9'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                background: '#e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                fontSize: '13px',
-                color: '#475569'
-              }}>
-                D
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>David</div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Admin</div>
-              </div>
+          {filteredUsers.length === 0 ? (
+            <div style={{ padding: '24px 8px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+              No stores found.
             </div>
-            <button
-              onClick={handleAdminLogout}
-              title="Sign Out"
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-            >
-              <MoreVertical size={16} />
-            </button>
-          </div>
+          ) : (
+            filteredUsers.map(user => {
+              const isSelected = selectedUser && user.id === selectedUser.id;
+              const isDepleted = (user.balance || 0) <= 0;
+              return (
+                <div
+                  key={user.id}
+                  onClick={() => setSelectedUserId(user.id)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    background: isSelected ? '#f1f5f9' : 'transparent',
+                    border: isSelected ? '1px solid #e2e8f0' : '1px solid transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: isSelected ? '#0f172a' : '#e2e8f0',
+                      color: isSelected ? '#ffffff' : '#475569',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {(user.storeName || user.id).charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {user.storeName || user.id}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        ID: {user.id}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: isDepleted ? '#dc2626' : '#10b981'
+                    }}>
+                      ${(user.balance || 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
+        {/* Sidebar Footer: Admin & Back */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={onBackToHome}
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <ArrowLeft size={13} /> Back to Site
+          </button>
+          <button
+            onClick={handleAdminLogout}
+            style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+          >
+            Sign Out
+          </button>
+        </div>
       </aside>
 
-      {/* ─── MAIN CONTENT AREA ─── */}
+      {/* ─── MAIN CONTENT: STORE CONTROLS ON EACH PAGE ─── */}
       <main style={{
         flex: 1,
-        padding: '24px 32px',
+        padding: '24px',
         overflowY: 'auto',
-        maxWidth: '1400px',
+        maxWidth: '1200px',
         boxSizing: 'border-box'
       }}>
 
-        {/* Top Breadcrumbs & Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#94a3b8' }}>
-            <button 
-              onClick={onBackToHome} 
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span>Overview</span>
-            <span>/</span>
-            <span style={{ color: '#0f172a', fontWeight: '600' }}>Manage Leads</span>
-          </div>
-
-          {/* Right Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={() => {
-                fetchUsers();
-                triggerToast('Syncing all stores with Supabase...');
-              }}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '20px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#0f172a',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-              }}
-            >
-              <Download size={14} />
-              <span>Export</span>
-            </button>
-
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: '700',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)'
-              }}
-            >
-              <Plus size={14} />
-              <span>+ New Lead</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Page Title */}
-        <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 20px 0', letterSpacing: '-0.03em' }}>
-          All Leads
-        </h1>
-
-        {/* ─── 4 TOP KPI METRIC CARDS (EXACT MATCH TO SCREENSHOT) ─── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px'
-        }}>
-          {/* Card 1: Total lead */}
-          <KpiCard
-            icon={Users}
-            delta="+ 12%"
-            deltaPositive={true}
-            title="Total lead"
-            value={totalStoresCount > 0 ? (3420 + totalStoresCount).toLocaleString() : '3,421'}
-            subtitle="VS. Last period"
-          />
-
-          {/* Card 2: In progress */}
-          <KpiCard
-            icon={Activity}
-            delta="+ 8%"
-            deltaPositive={true}
-            title="In progress"
-            value={activeStoresCount > 0 ? (80 + activeStoresCount).toString() : '87'}
-            subtitle="VS. Last period"
-          />
-
-          {/* Card 3: New Today */}
-          <KpiCard
-            icon={MessageSquare}
-            delta="- 18%"
-            deltaPositive={false}
-            title="New Today"
-            value={totalSmsCount > 0 ? totalSmsCount.toString() : '42'}
-            subtitle="VS. Last period"
-          />
-
-          {/* Card 4: Meetings Booked */}
-          <KpiCard
-            icon={Calendar}
-            delta="+ 15%"
-            deltaPositive={true}
-            title="Meetings Booked"
-            value="124"
-            subtitle="VS. Last period"
-          />
-        </div>
-
-        {/* ─── MAIN TABLE CONTAINER CARD ("Lead list") ─── */}
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid #f1f5f9',
-          borderRadius: '20px',
-          padding: '20px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)',
-          marginBottom: '24px'
-        }}>
-
-          {/* Header of Table */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Lead list
-            </h3>
-
-            {/* Table Action Icon Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TableIconButton icon={Search} onClick={() => {}} />
-              <TableIconButton icon={Filter} onClick={() => {}} />
-              <TableIconButton icon={Download} onClick={() => triggerToast('Exporting table records...')} />
-              <TableIconButton icon={MoreVertical} onClick={() => {}} />
-            </div>
-          </div>
-
-          {/* Custom Responsive Table (Zero Horizontal Scroll) */}
-          <div style={{ width: '100%', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#94a3b8', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 14px', width: '30px' }}>
-                    <CustomCheckbox checked={false} onChange={() => {}} />
-                  </th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Lead / Store</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Service</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Stage</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Company</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Status</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600' }}>Last Contact</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
-                      No store leads found. Click "+ New Lead" to provision an account.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((user, idx) => {
-                    const isSelected = selectedUser && user.id === selectedUser.id;
-                    const isPaused = (user.balance || 0) <= 0;
-                    
-                    // Demo values matching screenshot style
-                    const services = ['Consulting', 'Training', 'Basic', 'Premium', 'Standard'];
-                    const serviceName = user.pricingMode === 'fixed_fee' ? 'Premium' : services[idx % services.length];
-                    const progressPercent = isPaused ? 0 : 35;
-                    const statuses = isPaused ? 'Paused' : (idx === 0 ? 'New' : idx === 1 ? 'Meeting' : idx === 4 ? 'Qualified' : idx === 8 ? 'Follow Up' : 'Open');
-
-                    return (
-                      <tr
-                        key={user.id}
-                        onClick={() => setSelectedUserId(user.id)}
-                        style={{
-                          borderBottom: '1px solid #f8fafc',
-                          cursor: 'pointer',
-                          backgroundColor: isSelected ? 'rgba(29, 97, 255, 0.03)' : 'transparent',
-                          transition: 'background 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#fafafa'; }}
-                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      >
-                        {/* Checkbox */}
-                        <td style={{ padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
-                          <CustomCheckbox checked={isSelected} onChange={() => setSelectedUserId(user.id)} />
-                        </td>
-
-                        {/* Lead / Store with Avatar */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              background: '#e0e7ff',
-                              color: '#3730a3',
-                              fontWeight: '700',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}>
-                              {(user.storeName || user.id).charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '700', color: '#0f172a' }}>
-                                {user.storeName || user.id}
-                              </div>
-                              <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                Balance: ${(user.balance || 0).toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Service */}
-                        <td style={{ padding: '12px 14px', color: '#475569' }}>
-                          {serviceName}
-                        </td>
-
-                        {/* Stage with Segmented Progress Bar */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '80px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: '600', color: '#0f172a', marginBottom: '3px' }}>
-                                {isPaused ? 'Paused' : (idx % 2 === 0 ? 'Contacted' : 'Qualified')}
-                              </div>
-                              <SegmentedBar filled={isPaused ? 0 : 3} total={5} />
-                            </div>
-                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>{progressPercent}%</span>
-                          </div>
-                        </td>
-
-                        {/* Company / Store Address */}
-                        <td style={{ padding: '12px 14px', color: '#475569' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span>{user.address || `${user.id}.corp`}</span>
-                            <ExternalLink size={11} color="#94a3b8" />
-                          </div>
-                        </td>
-
-                        {/* Status Pill */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <StatusPill status={statuses} />
-                        </td>
-
-                        {/* Last Contact */}
-                        <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '12px' }}>
-                          {idx === 0 ? '5 min ago' : idx === 1 ? '12 min ago' : `${idx + 1} hr ago`}
-                        </td>
-
-                        {/* Action Icons */}
-                        <td style={{ padding: '12px 14px', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <ActionIconButton icon={Phone} onClick={() => triggerToast(`Dialing ${user.phone || user.id}...`)} />
-                            <ActionIconButton icon={MessageSquare} onClick={() => { setSelectedUserId(user.id); setActiveTab('activity'); }} />
-                            <ActionIconButton icon={Trash2} danger={true} onClick={() => handleDeleteUser(user.id)} />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-
-        {/* ─── SELECTED STORE DETAILED MANAGEMENT TABS ─── */}
-        {selectedUser && (
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #f1f5f9',
-            borderRadius: '20px',
-            padding: '24px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
-          }}>
-
-            {/* Store Title & Quick Balance Refill */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+        {selectedUser ? (
+          <div>
+            {/* Top Store Header Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                     {selectedUser.storeName || selectedUser.id}
-                  </h2>
-                  <StatusPill status={(selectedUser.balance || 0) <= 0 ? 'Paused' : 'Active'} />
+                  </h1>
+                  <span style={{
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    background: (selectedUser.balance || 0) <= 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                    color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669',
+                    border: `1px solid ${(selectedUser.balance || 0) <= 0 ? '#fca5a5' : '#86efac'}`
+                  }}>
+                    {(selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active'}
+                  </span>
                 </div>
-                <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px' }}>
                   <span>User ID: <strong>{selectedUser.id}</strong></span>
-                  <span>Phone: <strong>{selectedUser.phone || 'Not set'}</strong></span>
-                  <span>Password: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
+                  <span>APK Password: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
                     <button 
                       onClick={() => setShowPasswordMap(prev => ({ ...prev, [selectedUser.id]: !prev[selectedUser.id] }))}
-                      style={{ background: 'none', border: 'none', color: '#1d61ff', cursor: 'pointer', marginLeft: '6px', fontSize: '11px', fontWeight: '600' }}
+                      style={{ background: 'none', border: 'none', color: '#1d61ff', cursor: 'pointer', marginLeft: '6px', fontSize: '11px' }}
                     >
                       {showPasswordMap[selectedUser.id] ? 'Hide' : 'Show'}
                     </button>
@@ -1189,68 +775,141 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
               </div>
 
-              {/* Balance Card with Quick Refill Buttons */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px solid #f1f5f9',
-                borderRadius: '14px',
-                padding: '12px 18px',
-                textAlign: 'right'
-              }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>Current Balance</div>
+              {/* Header Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    fetchUsers();
+                    triggerToast('Syncing store with live database...');
+                  }}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={13} />
+                  <span>Sync APK</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteUser(selectedUser.id)}
+                  style={{
+                    background: '#fee2e2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Store</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3 Real Telemetry Summary Cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '14px',
+              marginBottom: '20px'
+            }}>
+              {/* Card 1: Balance Controls */}
+              <div style={kpiCardStyle}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Account Balance
+                </div>
                 <div style={{
                   fontSize: '24px',
                   fontWeight: '800',
                   color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#10b981',
-                  marginBottom: '8px'
+                  marginBottom: '10px'
                 }}>
                   ${(selectedUser.balance || 0).toFixed(2)}
                 </div>
-                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <button onClick={() => handleUpdateBalance(5.00)} style={pillBtnStyle}>+$5</button>
                   <button onClick={() => handleUpdateBalance(20.00)} style={pillBtnStyle}>+$20</button>
                   <button onClick={() => handleUpdateBalance(-1.00)} style={pillBtnStyle}>-$1</button>
                   <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>Set $0</button>
                 </div>
               </div>
+
+              {/* Card 2: Total SMS Handled */}
+              <div style={kpiCardStyle}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Total SMS Handled
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                  {selectedUser.activities?.length || 0}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Model: <strong>Gemini 3.1 Flash Lite</strong>
+                </div>
+              </div>
+
+              {/* Card 3: Total Cost & Tokens */}
+              <div style={kpiCardStyle}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Revenue & Token Usage
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                  ${(selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0) || 0).toFixed(4)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Total Tokens: {selectedUser.activities?.reduce((sum, a) => sum + (a.tokensIn || 0) + (a.tokensOut || 0), 0) || 0}
+                </div>
+              </div>
             </div>
 
-            {/* Custom Tab Switcher */}
+            {/* Navigation Tabs (Zero Horizontal Scroll) */}
             <div style={{
               display: 'flex',
-              gap: '8px',
-              borderBottom: '1px solid #f1f5f9',
-              paddingBottom: '12px',
+              gap: '6px',
+              borderBottom: '1px solid #e2e8f0',
+              paddingBottom: '10px',
               marginBottom: '20px',
-              overflowX: 'auto'
+              flexWrap: 'wrap'
             }}>
               {[
-                { id: 'overview', label: 'Store Info & Address', icon: StoreIcon },
+                { id: 'profile', label: 'Store Profile & AI FAQ', icon: FileText },
                 { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
+                { id: 'spam_schedule', label: 'Spam & Business Hours', icon: Clock },
                 { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
-                { id: 'profile', label: 'AI Knowledge & FAQ', icon: Sparkles },
-                { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
                 { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
               ].map(tab => {
                 const isActive = activeTab === tab.id;
-                const IconComp = tab.icon || Sparkles;
+                const IconComp = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     style={{
-                      background: isActive ? '#0f172a' : '#f8fafc',
+                      background: isActive ? '#0f172a' : '#ffffff',
                       color: isActive ? '#ffffff' : '#64748b',
-                      border: 'none',
-                      borderRadius: '20px',
-                      padding: '8px 16px',
+                      border: isActive ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
                       fontSize: '12px',
                       fontWeight: '700',
                       cursor: 'pointer',
-                      display: 'inline-flex',
+                      display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      whiteSpace: 'nowrap',
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -1261,68 +920,114 @@ export default function MasterControlPanel({ onBackToHome }) {
               })}
             </div>
 
-            {/* TAB: STORE INFO */}
-            {activeTab === 'overview' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                <div>
-                  <label style={formLabelStyle}>Store / Business Name</label>
-                  <input
-                    type="text"
-                    value={storeInfoDraft.storeName || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, storeInfo: true }));
-                      setStoreInfoDraft(prev => ({ ...prev, storeName: e.target.value }));
-                    }}
-                    style={customInputStyle}
-                  />
-                </div>
+            {/* ─── TAB 1: STORE PROFILE & AI FAQ ─── */}
+            {activeTab === 'profile' && (
+              <div style={cardSectionStyle}>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
+                  Store Profile & AI Instructions
+                </h3>
 
-                <div>
-                  <label style={formLabelStyle}>Phone Number</label>
-                  <input
-                    type="text"
-                    value={storeInfoDraft.phone || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, storeInfo: true }));
-                      setStoreInfoDraft(prev => ({ ...prev, phone: e.target.value }));
-                    }}
-                    placeholder="+1 (555) 000-0000"
-                    style={customInputStyle}
-                  />
-                </div>
-
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={formLabelStyle}>Store Address</label>
-                  <input
-                    type="text"
-                    value={storeInfoDraft.address || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, storeInfo: true }));
-                      setStoreInfoDraft(prev => ({ ...prev, address: e.target.value }));
-                    }}
-                    placeholder="e.g. 123 Main St, Suite 400"
-                    style={customInputStyle}
-                  />
-                </div>
-
-                {editFlags.storeInfo && (
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button onClick={handleSaveStoreInfo} style={solidPrimaryBtnStyle}>
-                      Save Store Info
-                    </button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={formLabelStyle}>Store / Business Name</label>
+                    <input
+                      type="text"
+                      value={profileDraft.storeName || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, storeName: e.target.value }));
+                      }}
+                      style={customInputStyle}
+                    />
                   </div>
-                )}
+
+                  <div>
+                    <label style={formLabelStyle}>Phone Number</label>
+                    <input
+                      type="text"
+                      value={profileDraft.phone || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, phone: e.target.value }));
+                      }}
+                      placeholder="+1 (555) 000-0000"
+                      style={customInputStyle}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={formLabelStyle}>Physical Store Address</label>
+                  <input
+                    type="text"
+                    value={profileDraft.address || ''}
+                    onChange={(e) => {
+                      setEditFlags(prev => ({ ...prev, profile: true }));
+                      setProfileDraft(prev => ({ ...prev, address: e.target.value }));
+                    }}
+                    placeholder="e.g. 123 Market St, San Francisco, CA"
+                    style={customInputStyle}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={formLabelStyle}>Business Details, Services & FAQ Knowledge</label>
+                  <textarea
+                    rows={4}
+                    value={profileDraft.businessInfo || ''}
+                    onChange={(e) => {
+                      setEditFlags(prev => ({ ...prev, profile: true }));
+                      setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value }));
+                    }}
+                    placeholder="e.g. Open Mon-Sat 9AM-7PM. Specializing in organic artisan sourdough..."
+                    style={{ ...customInputStyle, resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={formLabelStyle}>AI Reply Tone</label>
+                  <input
+                    type="text"
+                    value={profileDraft.replyTone || ''}
+                    onChange={(e) => {
+                      setEditFlags(prev => ({ ...prev, profile: true }));
+                      setProfileDraft(prev => ({ ...prev, replyTone: e.target.value }));
+                    }}
+                    placeholder="Professional, friendly, and concise"
+                    style={customInputStyle}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={formLabelStyle}>Strict Rules & Limitations</label>
+                  <textarea
+                    rows={2}
+                    value={profileDraft.aiRules || ''}
+                    onChange={(e) => {
+                      setEditFlags(prev => ({ ...prev, profile: true }));
+                      setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
+                    }}
+                    placeholder="e.g. Never guarantee same-day delivery without manager approval."
+                    style={{ ...customInputStyle, resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
+                    Save Store Profile & Sync to APK
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* TAB: LIVE SMS ACTIVITY */}
+            {/* ─── TAB 2: LIVE SMS ACTIVITY ─── */}
             {activeTab === 'activity' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
-                    Activity Ledger ({selectedUser.activities?.length || 0} messages)
-                  </span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={cardSectionStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    Live SMS Log ({selectedUser.activities?.length || 0})
+                  </h3>
+                  <div style={{ display: 'flex', gap: '4px' }}>
                     {['all', 'sent', 'blocked'].map(f => (
                       <button
                         key={f}
@@ -1330,8 +1035,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                         style={{
                           background: activityFilter === f ? '#0f172a' : '#f8fafc',
                           color: activityFilter === f ? '#ffffff' : '#64748b',
-                          border: 'none',
-                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
                           padding: '4px 10px',
                           fontSize: '11px',
                           fontWeight: '700',
@@ -1345,10 +1050,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '450px', overflowY: 'auto' }}>
                   {(!selectedUser.activities || selectedUser.activities.length === 0) ? (
-                    <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: '13px' }}>
-                      No SMS activity recorded yet. Incoming customer SMS will appear here in real time.
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '13px' }}>
+                      No SMS activity recorded yet. Incoming customer texts will appear here in real time.
                     </div>
                   ) : (
                     selectedUser.activities
@@ -1360,9 +1065,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                       .map((act, i) => (
                         <div key={act.id || i} style={{
                           background: '#f8fafc',
-                          border: '1px solid #f1f5f9',
-                          borderRadius: '12px',
-                          padding: '12px 16px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '12px',
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '6px'
@@ -1371,12 +1076,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                             <span style={{ fontWeight: '700', color: '#0f172a' }}>{act.sender}</span>
                             <span style={{ color: '#94a3b8' }}>{act.time}</span>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 10px', fontSize: '12px' }}>
+                          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '12px' }}>
                             <strong>In:</strong> {act.incoming}
                           </div>
                           {act.reply && (
-                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: '#1d4ed8' }}>
-                              <strong>AI:</strong> {act.reply}
+                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#1d4ed8' }}>
+                              <strong>AI Reply:</strong> {act.reply}
                             </div>
                           )}
                           <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b' }}>
@@ -1392,285 +1097,264 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* TAB: PRICING & TOKEN RATES */}
-            {activeTab === 'pricing' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-                <PricingModeCard
-                  title="Fixed Flat Fee"
-                  desc="Deduct a fixed dollar amount per auto-reply."
-                  active={selectedUser.pricingMode === 'fixed_fee'}
-                  onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700' }}>$</span>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={selectedUser.fixedFeePerMessage || 0.005}
-                      onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                      style={{ ...customInputStyle, width: '90px' }}
-                    />
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>/ message</span>
-                  </div>
-                </PricingModeCard>
-
-                <PricingModeCard
-                  title="Custom Token Rates"
-                  desc="Bill real input and output token counts."
-                  active={selectedUser.pricingMode === 'token_custom'}
-                  onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>In $/1M:</span>
-                      <input
-                        type="number"
-                        step="0.05"
-                        value={selectedUser.customInputPrice1M || 0.25}
-                        onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
-                        style={{ ...customInputStyle, width: '80px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>Out $/1M:</span>
-                      <input
-                        type="number"
-                        step="0.10"
-                        value={selectedUser.customOutputPrice1M || 1.50}
-                        onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
-                        style={{ ...customInputStyle, width: '80px' }}
-                      />
-                    </div>
-                  </div>
-                </PricingModeCard>
-
-                <PricingModeCard
-                  title="Direct AI Pass-Through"
-                  desc="Standard supplier token pricing."
-                  active={selectedUser.pricingMode === 'default_ai'}
-                  onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
-                >
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
-                    Gemini 3.1 Flash Lite ($0.25 / $1.50)
-                  </div>
-                </PricingModeCard>
-              </div>
-            )}
-
-            {/* TAB: STORE PROFILE & AI SETUP */}
-            {activeTab === 'profile' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label style={formLabelStyle}>Business / Brand Name</label>
-                  <input
-                    type="text"
-                    value={profileDraft.businessName || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, profile: true }));
-                      setProfileDraft(prev => ({ ...prev, businessName: e.target.value }));
-                    }}
-                    style={customInputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label style={formLabelStyle}>Business Details, Services & FAQ</label>
-                  <textarea
-                    rows={4}
-                    value={profileDraft.businessInfo || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, profile: true }));
-                      setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value }));
-                    }}
-                    placeholder="e.g. Open Mon-Sat 9AM-7PM. Specializing in organic artisan sourdough..."
-                    style={{ ...customInputStyle, resize: 'vertical' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={formLabelStyle}>AI Reply Tone</label>
-                  <input
-                    type="text"
-                    value={profileDraft.replyTone || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, profile: true }));
-                      setProfileDraft(prev => ({ ...prev, replyTone: e.target.value }));
-                    }}
-                    style={customInputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label style={formLabelStyle}>Strict Rules & Limitations</label>
-                  <textarea
-                    rows={2}
-                    value={profileDraft.aiRules || ''}
-                    onChange={(e) => {
-                      setEditFlags(prev => ({ ...prev, profile: true }));
-                      setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
-                    }}
-                    placeholder="e.g. Do not promise discounts without manager approval."
-                    style={{ ...customInputStyle, resize: 'vertical' }}
-                  />
-                </div>
-
-                {editFlags.profile && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
-                      Save Profile & Sync to APK
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB: SPAM & HOURS */}
+            {/* ─── TAB 3: SPAM & BUSINESS HOURS ─── */}
             {activeTab === 'spam_schedule' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Spam Protection</span>
-                    <CustomSwitch
-                      checked={spamDraft.spamEnabled !== false}
-                      onChange={(checked) => {
-                        setEditFlags(prev => ({ ...prev, spam: true }));
-                        setSpamDraft(prev => ({ ...prev, spamEnabled: checked }));
-                      }}
-                    />
+              <div style={cardSectionStyle}>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
+                  Spam Protection & Operating Hours
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                  {/* Spam Settings */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Spam Protection Switch</span>
+                      <CustomSwitch
+                        checked={spamDraft.spamEnabled !== false}
+                        onChange={(checked) => {
+                          setEditFlags(prev => ({ ...prev, spam: true }));
+                          setSpamDraft(prev => ({ ...prev, spamEnabled: checked }));
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
+                        <input
+                          type="number"
+                          value={spamDraft.cooldownSeconds ?? 90}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
+                          }}
+                          style={{ ...customInputStyle, width: '80px' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>Max Replies in Window:</span>
+                        <input
+                          type="number"
+                          value={spamDraft.maxReplies ?? 3}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
+                          }}
+                          style={{ ...customInputStyle, width: '80px' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>Window (Minutes):</span>
+                        <input
+                          type="number"
+                          value={spamDraft.windowMinutes ?? 10}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
+                          }}
+                          style={{ ...customInputStyle, width: '80px' }}
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>Cooldown (seconds):</span>
-                      <input
-                        type="number"
-                        value={spamDraft.cooldownSeconds ?? 90}
-                        onChange={(e) => {
+                  {/* Business Hours */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Operating Hours Filter</span>
+                      <CustomSwitch
+                        checked={spamDraft.scheduleEnabled === true}
+                        onChange={(checked) => {
                           setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
+                          setSpamDraft(prev => ({ ...prev, scheduleEnabled: checked }));
                         }}
-                        style={{ ...customInputStyle, width: '80px' }}
                       />
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>Max Replies:</span>
-                      <input
-                        type="number"
-                        value={spamDraft.maxReplies ?? 3}
-                        onChange={(e) => {
-                          setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
-                        }}
-                        style={{ ...customInputStyle, width: '80px' }}
-                      />
-                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>Start / End Time:</span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input
+                            type="time"
+                            value={spamDraft.scheduleStart || '09:00'}
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
+                            }}
+                            style={{ ...customInputStyle, width: '90px' }}
+                          />
+                          <input
+                            type="time"
+                            value={spamDraft.scheduleEnd || '18:00'}
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
+                            }}
+                            style={{ ...customInputStyle, width: '90px' }}
+                          />
+                        </div>
+                      </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>Window (minutes):</span>
-                      <input
-                        type="number"
-                        value={spamDraft.windowMinutes ?? 10}
-                        onChange={(e) => {
-                          setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
-                        }}
-                        style={{ ...customInputStyle, width: '80px' }}
-                      />
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Active Days:</span>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                            const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                            const isSelected = days.includes(day);
+                            return (
+                              <button
+                                key={day}
+                                onClick={() => {
+                                  const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
+                                  setEditFlags(prev => ({ ...prev, spam: true }));
+                                  setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
+                                }}
+                                style={{
+                                  background: isSelected ? '#0f172a' : '#ffffff',
+                                  border: isSelected ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                                  color: isSelected ? '#ffffff' : '#64748b',
+                                  borderRadius: '6px',
+                                  padding: '3px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Operating Hours</span>
-                    <CustomSwitch
-                      checked={spamDraft.scheduleEnabled === true}
-                      onChange={(checked) => {
-                        setEditFlags(prev => ({ ...prev, spam: true }));
-                        setSpamDraft(prev => ({ ...prev, scheduleEnabled: checked }));
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#64748b' }}>Start / End Time:</span>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <input
-                          type="time"
-                          value={spamDraft.scheduleStart || '09:00'}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
-                          }}
-                          style={{ ...customInputStyle, width: '90px' }}
-                        />
-                        <input
-                          type="time"
-                          value={spamDraft.scheduleEnd || '18:00'}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
-                          }}
-                          style={{ ...customInputStyle, width: '90px' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Active Days:</span>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                          const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                          const isSelected = days.includes(day);
-                          return (
-                            <button
-                              key={day}
-                              onClick={() => {
-                                const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
-                                setEditFlags(prev => ({ ...prev, spam: true }));
-                                setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
-                              }}
-                              style={{
-                                background: isSelected ? '#0f172a' : '#ffffff',
-                                border: isSelected ? '1px solid #0f172a' : '1px solid #e2e8f0',
-                                color: isSelected ? '#ffffff' : '#64748b',
-                                borderRadius: '6px',
-                                padding: '4px 8px',
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={handleSaveSpamSchedule} style={solidPrimaryBtnStyle}>
+                    Save Spam & Hours Rules
+                  </button>
                 </div>
-
-                {editFlags.spam && (
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button onClick={handleSaveSpamSchedule} style={solidPrimaryBtnStyle}>
-                      Save Spam & Schedule Rules
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* TAB: MANUAL REPLY LIST */}
+            {/* ─── TAB 4: PRICING & TOKEN RATES ─── */}
+            {activeTab === 'pricing' && (
+              <div style={cardSectionStyle}>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
+                  Store Pricing Mode
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+                  <div
+                    onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                    style={{
+                      background: selectedUser.pricingMode === 'fixed_fee' ? '#ffffff' : '#f8fafc',
+                      border: selectedUser.pricingMode === 'fixed_fee' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                      Fixed Flat Fee
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                      Deduct a fixed dollar rate per auto-reply.
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '700' }}>$</span>
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={selectedUser.fixedFeePerMessage || 0.005}
+                        onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                        style={{ ...customInputStyle, width: '90px' }}
+                      />
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>/ msg</span>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                    style={{
+                      background: selectedUser.pricingMode === 'token_custom' ? '#ffffff' : '#f8fafc',
+                      border: selectedUser.pricingMode === 'token_custom' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                      Custom Token Rates
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                      Bill actual prompt and reply token usage.
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>In $/1M:</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={selectedUser.customInputPrice1M || 0.25}
+                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
+                          style={{ ...customInputStyle, width: '80px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>Out $/1M:</span>
+                        <input
+                          type="number"
+                          step="0.10"
+                          value={selectedUser.customOutputPrice1M || 1.50}
+                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
+                          style={{ ...customInputStyle, width: '80px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
+                    style={{
+                      background: selectedUser.pricingMode === 'default_ai' ? '#ffffff' : '#f8fafc',
+                      border: selectedUser.pricingMode === 'default_ai' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                      Direct AI Pass-Through
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                      Standard supplier token rate.
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
+                      Gemini 3.1 Flash Lite ($0.25 / $1.50)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─── TAB 5: MANUAL REPLY LIST ─── */}
             {activeTab === 'blacklist' && (
-              <div>
+              <div style={cardSectionStyle}>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
+                  Manual Reply List (Do Not Auto-Reply)
+                </h3>
+
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                   <input
                     id="newBlockInput"
                     type="text"
                     placeholder="Enter phone number (+1...)"
-                    style={{ ...customInputStyle, maxWidth: '280px' }}
+                    style={{ ...customInputStyle, maxWidth: '260px' }}
                   />
                   <button
                     onClick={() => {
@@ -1689,15 +1373,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {(!selectedUser.blacklist || selectedUser.blacklist.length === 0) ? (
                     <div style={{ color: '#94a3b8', fontSize: '13px', padding: '16px 0', textAlign: 'center' }}>
-                      No numbers in manual reply list.
+                      No phone numbers in manual reply list.
                     </div>
                   ) : (
                     selectedUser.blacklist.map(num => (
                       <div key={num} style={{
                         background: '#f8fafc',
-                        border: '1px solid #f1f5f9',
-                        padding: '10px 16px',
-                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
@@ -1716,6 +1400,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+            Select a store account from the left sidebar to manage controls and live activity.
           </div>
         )}
 
@@ -1737,8 +1425,8 @@ export default function MasterControlPanel({ onBackToHome }) {
           <div style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '24px',
-            padding: '32px',
+            borderRadius: '20px',
+            padding: '28px',
             width: '100%',
             maxWidth: '440px',
             boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
@@ -1755,11 +1443,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <X size={18} />
               </button>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' }}>
               Provision client credentials for instant on-device APK login.
             </p>
 
-            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={formLabelStyle}>User ID (Required)</label>
                 <input
@@ -1791,6 +1479,17 @@ export default function MasterControlPanel({ onBackToHome }) {
                   placeholder="e.g. Downtown Bakery"
                   value={newStoreName}
                   onChange={(e) => setNewStoreName(e.target.value)}
+                  style={customInputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={formLabelStyle}>Phone Number</label>
+                <input
+                  type="text"
+                  placeholder="+1 (555) 000-0000"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
                   style={customInputStyle}
                 />
               </div>
@@ -1832,8 +1531,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     color: '#64748b',
-                    borderRadius: '20px',
-                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
                     fontSize: '13px',
                     fontWeight: '700',
                     cursor: 'pointer'
@@ -1858,168 +1557,7 @@ export default function MasterControlPanel({ onBackToHome }) {
   );
 }
 
-// ─── REUSABLE CUSTOM UI COMPONENTS ───
-
-function SidebarNavItem({ icon: Icon, label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        width: '100%',
-        padding: '9px 12px',
-        borderRadius: '10px',
-        border: 'none',
-        background: active ? '#f1f5f9' : 'transparent',
-        color: active ? '#0f172a' : '#64748b',
-        fontWeight: active ? '700' : '500',
-        fontSize: '13px',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.15s ease'
-      }}
-    >
-      <Icon size={16} color={active ? '#0f172a' : '#94a3b8'} />
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function KpiCard({ icon: Icon, delta, deltaPositive, title, value, subtitle }) {
-  return (
-    <div style={{
-      background: '#ffffff',
-      border: '1px solid #f1f5f9',
-      borderRadius: '20px',
-      padding: '20px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-        <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '50%',
-          background: '#f8fafc',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Icon size={16} color="#64748b" />
-        </div>
-        <div style={{
-          fontSize: '11px',
-          fontWeight: '700',
-          padding: '3px 8px',
-          borderRadius: '20px',
-          background: deltaPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          color: deltaPositive ? '#059669' : '#dc2626'
-        }}>
-          {delta}
-        </div>
-      </div>
-      <div>
-        <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500', marginBottom: '4px' }}>
-          {title}
-        </div>
-        <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em', marginBottom: '4px' }}>
-          {value}
-        </div>
-        <div style={{ fontSize: '11px', color: '#cbd5e1' }}>
-          {subtitle}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SegmentedBar({ filled, total = 5 }) {
-  return (
-    <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: '12px',
-            height: '4px',
-            borderRadius: '2px',
-            background: i < filled ? '#10b981' : '#f1f5f9',
-            transition: 'background 0.2s ease'
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StatusPill({ status }) {
-  let bg = 'rgba(100, 116, 139, 0.08)';
-  let color = '#475569';
-  let border = '1px solid #cbd5e1';
-
-  if (status === 'New') {
-    bg = 'rgba(6, 182, 212, 0.08)';
-    color = '#0891b2';
-    border = '1px solid #06b6d4';
-  } else if (status === 'Meeting') {
-    bg = 'rgba(249, 115, 22, 0.08)';
-    color = '#ea580c';
-    border = '1px solid #f97316';
-  } else if (status === 'Qualified' || status === 'Active') {
-    bg = 'rgba(16, 185, 129, 0.08)';
-    color = '#059669';
-    border = '1px solid #10b981';
-  } else if (status === 'Follow Up') {
-    bg = 'rgba(217, 70, 239, 0.08)';
-    color = '#c026d3';
-    border = '1px solid #d946ef';
-  } else if (status === 'Paused') {
-    bg = 'rgba(239, 68, 68, 0.08)';
-    color = '#dc2626';
-    border = '1px solid #ef4444';
-  }
-
-  return (
-    <span style={{
-      display: 'inline-block',
-      padding: '3px 10px',
-      borderRadius: '20px',
-      fontSize: '11px',
-      fontWeight: '700',
-      background: bg,
-      color: color,
-      border: border
-    }}>
-      {status}
-    </span>
-  );
-}
-
-function CustomCheckbox({ checked, onChange }) {
-  return (
-    <div
-      onClick={onChange}
-      style={{
-        width: '16px',
-        height: '16px',
-        borderRadius: '5px',
-        border: checked ? '1.5px solid #0f172a' : '1.5px solid #cbd5e1',
-        background: checked ? '#0f172a' : '#ffffff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.15s ease'
-      }}
-    >
-      {checked && <Check size={11} color="#ffffff" strokeWidth={3} />}
-    </div>
-  );
-}
+// ─── CUSTOM COMPONENTS & STYLES ───
 
 function CustomSwitch({ checked, onChange }) {
   return (
@@ -2051,91 +1589,36 @@ function CustomSwitch({ checked, onChange }) {
   );
 }
 
-function TableIconButton({ icon: Icon, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: '32px',
-        height: '32px',
-        borderRadius: '8px',
-        background: '#ffffff',
-        border: '1px solid #f1f5f9',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: '#64748b'
-      }}
-    >
-      <Icon size={14} />
-    </button>
-  );
-}
+const cardSectionStyle = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '14px',
+  padding: '20px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+  boxSizing: 'border-box'
+};
 
-function ActionIconButton({ icon: Icon, onClick, danger }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: '28px',
-        height: '28px',
-        borderRadius: '6px',
-        background: '#f8fafc',
-        border: '1px solid #f1f5f9',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: danger ? '#dc2626' : '#64748b'
-      }}
-    >
-      <Icon size={12} />
-    </button>
-  );
-}
-
-function PricingModeCard({ title, desc, active, onClick, children }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: active ? '#ffffff' : '#f8fafc',
-        border: active ? '2px solid #0f172a' : '1px solid #f1f5f9',
-        borderRadius: '16px',
-        padding: '16px',
-        cursor: 'pointer',
-        transition: 'all 0.15s ease'
-      }}
-    >
-      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-        {title}
-      </div>
-      <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
-        {desc}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function StoreIcon(props) {
-  return <Users {...props} />;
-}
-
-// ─── STYLES ───
+const kpiCardStyle = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  padding: '16px',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between'
+};
 
 const customInputStyle = {
   width: '100%',
-  background: '#f8fafc',
-  border: '1.5px solid #f1f5f9',
-  borderRadius: '10px',
-  padding: '10px 14px',
+  background: '#ffffff',
+  border: '1.5px solid #e2e8f0',
+  borderRadius: '8px',
+  padding: '9px 12px',
   fontSize: '13px',
   color: '#0f172a',
   outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.15s ease'
+  boxSizing: 'border-box'
 };
 
 const formLabelStyle = {
@@ -2143,19 +1626,19 @@ const formLabelStyle = {
   fontSize: '12px',
   fontWeight: '700',
   color: '#475569',
-  marginBottom: '6px'
+  marginBottom: '5px'
 };
 
 const solidPrimaryBtnStyle = {
   background: '#0f172a',
   color: '#ffffff',
   border: 'none',
-  borderRadius: '20px',
-  padding: '8px 20px',
+  borderRadius: '8px',
+  padding: '8px 18px',
   fontSize: '13px',
   fontWeight: '700',
   cursor: 'pointer',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)'
+  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.12)'
 };
 
 const pillBtnStyle = {
@@ -2163,7 +1646,7 @@ const pillBtnStyle = {
   border: '1px solid #e2e8f0',
   color: '#0f172a',
   padding: '4px 10px',
-  borderRadius: '14px',
+  borderRadius: '8px',
   fontSize: '11px',
   fontWeight: '700',
   cursor: 'pointer'
