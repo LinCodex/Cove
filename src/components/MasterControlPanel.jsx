@@ -27,12 +27,17 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  Sliders,
   Key,
   Layers,
   Eye,
   EyeOff,
-  Bot
+  Bot,
+  Receipt,
+  Wallet,
+  CreditCard,
+  ArrowUpRight,
+  ArrowDownLeft,
+  History
 } from 'lucide-react';
 
 const PROVIDER_DEFAULTS = {
@@ -107,6 +112,10 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [credPassword, setCredPassword] = useState('');
   const [credError, setCredError] = useState('');
   const [credLoading, setCredLoading] = useState(false);
+
+  // Balance History & Ledger State
+  const [balanceFilter, setBalanceFilter] = useState('all');
+  const [customNote, setCustomNote] = useState('');
 
   // Draft States for current store
   const [profileDraft, setProfileDraft] = useState({ 
@@ -406,29 +415,57 @@ export default function MasterControlPanel({ onBackToHome }) {
     }
   };
 
-  const handleUpdateBalance = (delta) => {
+  const handleUpdateBalance = (delta, customReason = '') => {
     if (!selectedUser) return;
-    const nextBal = Math.max(0, selectedUser.balance + delta);
+    const currentBal = parseFloat(selectedUser.balance) || 0;
+    const nextBal = Math.max(0, currentBal + delta);
+    const newTx = {
+      id: Date.now(),
+      timestampMillis: Date.now(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      date: new Date().toLocaleDateString(),
+      type: delta > 0 ? 'Top-Up' : 'Manual Adjustment',
+      amount: delta,
+      balanceAfter: nextBal,
+      description: customReason || (delta > 0 ? `Admin Top-Up +$${delta.toFixed(2)}` : `Admin Deduction -$${Math.abs(delta).toFixed(2)}`)
+    };
+
+    const updatedHistory = [newTx, ...(selectedUser.balanceHistory || [])].slice(0, 200);
     const updated = {
       ...selectedUser,
       balance: nextBal,
-      status: nextBal <= 0 ? 'Paused (Zero Balance)' : 'Active'
+      status: nextBal <= 0 ? 'Paused (Zero Balance)' : 'Active',
+      balanceHistory: updatedHistory
     };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Balance: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)} (Live Synced)`);
+    triggerToast(`Balance: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)} (New: $${nextBal.toFixed(2)})`);
   };
 
   const handleSetZeroBalance = () => {
     if (!selectedUser) return;
+    const currentBal = parseFloat(selectedUser.balance) || 0;
+    const delta = -currentBal;
+    const newTx = {
+      id: Date.now(),
+      timestampMillis: Date.now(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      date: new Date().toLocaleDateString(),
+      type: 'Manual Adjustment',
+      amount: delta,
+      balanceAfter: 0.00,
+      description: 'Reset balance to $0.00'
+    };
+    const updatedHistory = [newTx, ...(selectedUser.balanceHistory || [])].slice(0, 200);
     const updated = {
       ...selectedUser,
       balance: 0.000,
-      status: 'Paused (Zero Balance)'
+      status: 'Paused (Zero Balance)',
+      balanceHistory: updatedHistory
     };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Store balance set to $0.000 (Auto-reply paused)`);
+    triggerToast(`Store balance reset to $0.00 (Auto-reply paused)`);
   };
 
   const handleUpdatePricing = (pricingMode, fixedFee, inPrice1M, outPrice1M) => {
@@ -1088,6 +1125,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               {[
                 { id: 'profile', label: 'Store Profile & FAQ', icon: FileText },
                 { id: 'ai_keys', label: 'AI Keys & Backups', icon: Key },
+                { id: 'balance_history', label: 'Balance & Ledger', icon: Receipt },
                 { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
                 { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
                 { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
@@ -1574,6 +1612,269 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <button onClick={handleSaveAiConfig} style={solidPrimaryBtnStyle}>
                     Save AI & Backup Keys to APK
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── TAB: ACCOUNT BALANCE & BILLING HISTORY ─── */}
+            {activeTab === 'balance_history' && (
+              <div style={cardSectionStyle}>
+                {/* Section Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      Account Balance & Transaction Ledger
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                      Complete deposit history, per-message token deductions, and manual credit adjustments.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => {
+                        fetchUsers();
+                        triggerToast('Syncing balance ledger from database...');
+                      }}
+                      style={{ ...pillBtnStyle, display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <RefreshCw size={12} />
+                      <span>Refresh Ledger</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Top Summary KPI Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '18px' }}>
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Current Available Balance
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669' }}>
+                      ${(selectedUser.balance || 0).toFixed(4)}
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {(selectedUser.balance || 0) <= 0 ? '⚠️ Zero Balance • APK Paused' : '✅ Active For SMS Auto-Replies'}
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Total Deposits / Top-Ups
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
+                      ${((selectedUser.balanceHistory || [])
+                        .filter(t => (parseFloat(t.amount) || 0) > 0)
+                        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)).toFixed(2)}
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {(selectedUser.balanceHistory || []).filter(t => (parseFloat(t.amount) || 0) > 0).length} deposit entries
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Total SMS Auto-Reply Spend
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
+                      ${Math.abs((selectedUser.balanceHistory || [])
+                        .filter(t => (parseFloat(t.amount) || 0) < 0 && (t.type?.toLowerCase().includes('sms') || t.description?.toLowerCase().includes('reply')))
+                        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || (selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0) || 0)).toFixed(4)}
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {selectedUser.activities?.length || 0} automated messages
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Balance Controls & Deposit Form */}
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Wallet size={14} color="#0f172a" />
+                    <span>Manage Store Funds</span>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                    {[5, 10, 20, 50, 100].map(amt => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => handleUpdateBalance(amt, `Admin Quick Top-Up +$${amt}.00`)}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          color: '#059669',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Plus size={12} />
+                        <span>${amt}.00</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Amount Form */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', alignItems: 'flex-end' }}>
+                    <div>
+                      <label style={formLabelStyle}>Custom Amount ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 25.00"
+                        value={customBalInput}
+                        onChange={(e) => setCustomBalInput(e.target.value)}
+                        style={customInputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={formLabelStyle}>Reference Note (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Stripe checkout, Manual adjustment"
+                        value={customNote}
+                        onChange={(e) => setCustomNote(e.target.value)}
+                        style={customInputStyle}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = parseFloat(customBalInput);
+                          if (!isNaN(val) && val > 0) {
+                            handleUpdateBalance(val, customNote || `Admin Top-Up +$${val.toFixed(2)}`);
+                            setCustomBalInput('');
+                            setCustomNote('');
+                          }
+                        }}
+                        style={{ ...solidPrimaryBtnStyle, background: '#059669', flex: 1, padding: '9px 12px', fontSize: '12px' }}
+                      >
+                        + Add Funds
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = parseFloat(customBalInput);
+                          if (!isNaN(val) && val > 0) {
+                            handleUpdateBalance(-val, customNote || `Admin Deduction -$${val.toFixed(2)}`);
+                            setCustomBalInput('');
+                            setCustomNote('');
+                          }
+                        }}
+                        style={{ ...solidPrimaryBtnStyle, background: '#dc2626', flex: 1, padding: '9px 12px', fontSize: '12px' }}
+                      >
+                        - Deduct
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ledger Table & Filters */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>
+                      Transaction History ({((selectedUser.balanceHistory || []).length)})
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {['all', 'topup', 'sms', 'adjustment'].map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setBalanceFilter(f)}
+                          style={{
+                            background: balanceFilter === f ? '#0f172a' : '#f8fafc',
+                            color: balanceFilter === f ? '#ffffff' : '#64748b',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            padding: '4px 10px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            textTransform: 'capitalize'
+                          }}
+                        >
+                          {f === 'topup' ? 'Top-Ups' : f === 'sms' ? 'SMS Replies' : f === 'adjustment' ? 'Adjustments' : 'All'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ledger Table */}
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '550px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
+                          <th style={{ padding: '10px 14px' }}>Date & Time</th>
+                          <th style={{ padding: '10px 14px' }}>Type</th>
+                          <th style={{ padding: '10px 14px' }}>Amount</th>
+                          <th style={{ padding: '10px 14px' }}>Balance After</th>
+                          <th style={{ padding: '10px 14px' }}>Details / Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(!selectedUser.balanceHistory || selectedUser.balanceHistory.length === 0) ? (
+                          <tr>
+                            <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                              No balance transactions recorded yet. Deposits and SMS deductions will appear here automatically.
+                            </td>
+                          </tr>
+                        ) : (
+                          selectedUser.balanceHistory
+                            .filter(t => {
+                              const amt = parseFloat(t.amount) || 0;
+                              const type = (t.type || '').toLowerCase();
+                              if (balanceFilter === 'topup') return amt > 0 || type.includes('deposit') || type.includes('top');
+                              if (balanceFilter === 'sms') return amt < 0 && (type.includes('sms') || type.includes('reply'));
+                              if (balanceFilter === 'adjustment') return type.includes('adjustment') || (amt < 0 && !type.includes('sms'));
+                              return true;
+                            })
+                            .map((tx, idx) => {
+                              const amt = parseFloat(tx.amount) || 0;
+                              const isPositive = amt > 0;
+                              return (
+                                <tr key={tx.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '10px 14px', color: '#64748b' }}>
+                                    <div>{tx.date || new Date(tx.timestampMillis || Date.now()).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>{tx.time || new Date(tx.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      padding: '2px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      background: isPositive ? '#ecfdf5' : '#fef2f2',
+                                      color: isPositive ? '#059669' : '#dc2626',
+                                      border: `1px solid ${isPositive ? '#a7f3d0' : '#fecaca'}`
+                                    }}>
+                                      {isPositive ? 'Top-Up' : tx.type || 'Deduction'}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: '800', color: isPositive ? '#059669' : '#dc2626' }}>
+                                    {isPositive ? `+$${amt.toFixed(4)}` : `-$${Math.abs(amt).toFixed(4)}`}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: '#0f172a', fontWeight: '600' }}>
+                                    {tx.balanceAfter != null ? `$${parseFloat(tx.balanceAfter).toFixed(4)}` : '—'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: '#475569' }}>
+                                    {tx.description || tx.recipientNumber || 'Balance change'}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

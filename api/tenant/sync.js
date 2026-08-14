@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { recentLogs } = body;
+      const { recentLogs, recentTx } = body;
 
       // If APK reports recent activity logs, record them in activities table
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
@@ -39,6 +39,27 @@ export default async function handler(req, res) {
         if (totalDeduction > 0 && user.balance > 0) {
           user.balance = Math.max(0, user.balance - totalDeduction);
           user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active';
+        }
+      }
+
+      // If APK reports recent balance transactions, merge them
+      if (Array.isArray(recentTx) && recentTx.length > 0) {
+        const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
+        const newTx = recentTx
+          .filter(t => !existingIds.has(String(t.id)))
+          .map(t => ({
+            id: t.id || Date.now(),
+            timestampMillis: t.timestampMillis || Date.now(),
+            time: new Date(t.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(t.timestampMillis || Date.now()).toLocaleDateString(),
+            type: (parseFloat(t.amount) || 0) >= 0 ? 'Top-Up' : 'SMS Reply',
+            amount: parseFloat(t.amount) || 0,
+            balanceAfter: user.balance,
+            description: t.description || (t.recipientNumber ? `SMS reply to ${t.recipientNumber}` : 'Auto-reply SMS')
+          }));
+
+        if (newTx.length > 0) {
+          user.balanceHistory = [...newTx, ...(user.balanceHistory || [])].slice(0, 200);
         }
       }
 

@@ -39,6 +39,7 @@ function rowToUser(row) {
     spamConfig: row.spam_config || {},
     aiConfig: row.ai_config || {},
     blacklist: row.blacklist || [],
+    balanceHistory: row.balance_history || [],
     activities: [],  // loaded separately when needed
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -64,6 +65,7 @@ function userToRow(user) {
   if (user.spamConfig != null || user.spam_config != null) row.spam_config = user.spamConfig ?? user.spam_config;
   if (user.aiConfig != null || user.ai_config != null) row.ai_config = user.aiConfig ?? user.ai_config;
   if (user.blacklist != null) row.blacklist = user.blacklist;
+  if (user.balanceHistory != null || user.balance_history != null) row.balance_history = user.balanceHistory ?? user.balance_history;
   row.last_active = new Date().toISOString();
   return row;
 }
@@ -193,7 +195,19 @@ export async function createUser(userData) {
       scheduleDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
       outOfHoursMsg: 'Thanks for contacting us! We are currently closed.'
     },
-    blacklist: []
+    blacklist: [],
+    balanceHistory: [
+      {
+        id: Date.now(),
+        timestampMillis: Date.now(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString(),
+        type: 'Deposit',
+        amount: parseFloat(userData.balance) || 10.00,
+        balanceAfter: parseFloat(userData.balance) || 10.00,
+        description: 'Initial store signup balance'
+      }
+    ]
   };
 
   const row = userToRow(newUser);
