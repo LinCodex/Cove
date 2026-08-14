@@ -1677,117 +1677,104 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                   {/* Spam Rules Card */}
                   <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
-                    {/* Master Spam Toggle */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
-                      <div>
-                        <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>Master Spam Protection</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Enable all rate limiting & anti-spam rules</div>
-                      </div>
-                      <CustomSwitch
-                        checked={spamDraft.spamEnabled !== false}
-                        onChange={(checked) => {
-                          setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, spamEnabled: checked }));
-                        }}
-                      />
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '14px' }}>
+                      Rate Limiting & Anti-Spam Rules
                     </div>
 
-                    {spamDraft.spamEnabled !== false && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
-                        {/* Rule 1: Cooldown */}
-                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
-                            <div>
-                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Per-Contact Cooldown</span>
-                              <div style={{ fontSize: '11px', color: '#64748b' }}>Ignore rapid incoming texts from same number</div>
-                            </div>
-                            <CustomSwitch
-                              checked={spamDraft.cooldownEnabled !== false}
-                              onChange={(checked) => {
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
+                      {/* Rule 1: Cooldown */}
+                      <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
+                          <div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Per-Contact Cooldown</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>Ignore rapid incoming texts from same number</div>
+                          </div>
+                          <CustomSwitch
+                            checked={spamDraft.cooldownEnabled !== false}
+                            onChange={(checked) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, cooldownEnabled: checked }));
+                            }}
+                          />
+                        </div>
+                        {spamDraft.cooldownEnabled !== false && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                            <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
+                            <input
+                              type="number"
+                              value={spamDraft.cooldownSeconds ?? 90}
+                              onChange={(e) => {
                                 setEditFlags(prev => ({ ...prev, spam: true }));
-                                setSpamDraft(prev => ({ ...prev, cooldownEnabled: checked }));
+                                setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
                               }}
+                              style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
                             />
                           </div>
-                          {spamDraft.cooldownEnabled !== false && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                              <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
-                              <input
-                                type="number"
-                                value={spamDraft.cooldownSeconds ?? 90}
-                                onChange={(e) => {
-                                  setEditFlags(prev => ({ ...prev, spam: true }));
-                                  setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
-                                }}
-                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Rule 2: Max Replies */}
-                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
-                            <div>
-                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Max Replies Cap</span>
-                              <div style={{ fontSize: '11px', color: '#64748b' }}>Limit consecutive auto-replies to one contact</div>
-                            </div>
-                            <CustomSwitch
-                              checked={spamDraft.maxRepliesEnabled !== false}
-                              onChange={(checked) => {
-                                setEditFlags(prev => ({ ...prev, spam: true }));
-                                setSpamDraft(prev => ({ ...prev, maxRepliesEnabled: checked }));
-                              }}
-                            />
-                          </div>
-                          {spamDraft.maxRepliesEnabled !== false && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                              <span style={{ color: '#64748b' }}>Max Replies:</span>
-                              <input
-                                type="number"
-                                value={spamDraft.maxReplies ?? 3}
-                                onChange={(e) => {
-                                  setEditFlags(prev => ({ ...prev, spam: true }));
-                                  setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
-                                }}
-                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Rule 3: Rolling Window */}
-                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
-                            <div>
-                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Rolling Time Window</span>
-                              <div style={{ fontSize: '11px', color: '#64748b' }}>Reset conversation counter after time passes</div>
-                            </div>
-                            <CustomSwitch
-                              checked={spamDraft.windowEnabled !== false}
-                              onChange={(checked) => {
-                                setEditFlags(prev => ({ ...prev, spam: true }));
-                                setSpamDraft(prev => ({ ...prev, windowEnabled: checked }));
-                              }}
-                            />
-                          </div>
-                          {spamDraft.windowEnabled !== false && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                              <span style={{ color: '#64748b' }}>Window (Minutes):</span>
-                              <input
-                                type="number"
-                                value={spamDraft.windowMinutes ?? 10}
-                                onChange={(e) => {
-                                  setEditFlags(prev => ({ ...prev, spam: true }));
-                                  setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
-                                }}
-                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    )}
+
+                      {/* Rule 2: Max Replies */}
+                      <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
+                          <div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Max Replies Cap</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>Limit consecutive auto-replies to one contact</div>
+                          </div>
+                          <CustomSwitch
+                            checked={spamDraft.maxRepliesEnabled !== false}
+                            onChange={(checked) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, maxRepliesEnabled: checked }));
+                            }}
+                          />
+                        </div>
+                        {spamDraft.maxRepliesEnabled !== false && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                            <span style={{ color: '#64748b' }}>Max Replies:</span>
+                            <input
+                              type="number"
+                              value={spamDraft.maxReplies ?? 3}
+                              onChange={(e) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
+                              }}
+                              style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rule 3: Rolling Window */}
+                      <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
+                          <div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Rolling Time Window</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>Reset conversation counter after time passes</div>
+                          </div>
+                          <CustomSwitch
+                            checked={spamDraft.windowEnabled !== false}
+                            onChange={(checked) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, windowEnabled: checked }));
+                            }}
+                          />
+                        </div>
+                        {spamDraft.windowEnabled !== false && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                            <span style={{ color: '#64748b' }}>Window (Minutes):</span>
+                            <input
+                              type="number"
+                              value={spamDraft.windowMinutes ?? 10}
+                              onChange={(e) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
+                              }}
+                              style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Business Hours & Schedule Card */}
