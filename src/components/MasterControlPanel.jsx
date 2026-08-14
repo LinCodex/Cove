@@ -86,6 +86,7 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [showPasswordMap, setShowPasswordMap] = useState({});
   const [showKeyMap, setShowKeyMap] = useState({});
   const [loading, setLoading] = useState(false);
+  const [customBalInput, setCustomBalInput] = useState('10.00');
 
   // New User Form State
   const [newUserId, setNewUserId] = useState('');
@@ -915,28 +916,84 @@ export default function MasterControlPanel({ onBackToHome }) {
             {/* 3 Real Telemetry Summary Cards */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
               gap: '14px',
               marginBottom: '20px'
             }}>
-              {/* Card 1: Balance Controls */}
+              {/* Card 1: Balance Controls with Custom Amount Input */}
               <div style={kpiCardStyle}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Account Balance
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>
+                    Account Balance
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button onClick={() => handleUpdateBalance(5.00)} style={pillBtnStyle}>+$5</button>
+                    <button onClick={() => handleUpdateBalance(20.00)} style={pillBtnStyle}>+$20</button>
+                    <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>Set $0</button>
+                  </div>
                 </div>
+
                 <div style={{
-                  fontSize: '24px',
+                  fontSize: '26px',
                   fontWeight: '800',
                   color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#10b981',
-                  marginBottom: '10px'
+                  margin: '4px 0 10px 0'
                 }}>
                   ${(selectedUser.balance || 0).toFixed(2)}
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button onClick={() => handleUpdateBalance(5.00)} style={pillBtnStyle}>+$5</button>
-                  <button onClick={() => handleUpdateBalance(20.00)} style={pillBtnStyle}>+$20</button>
-                  <button onClick={() => handleUpdateBalance(-1.00)} style={pillBtnStyle}>-$1</button>
-                  <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>Set $0</button>
+
+                {/* Custom Dollar Amount Add/Deduct/Set Controls */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', flex: '1 1 90px' }}>
+                    <span style={{ position: 'absolute', left: '10px', top: '8px', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>$</span>
+                    <input
+                      type="number"
+                      step="1.00"
+                      value={customBalInput}
+                      onChange={(e) => setCustomBalInput(e.target.value)}
+                      placeholder="0.00"
+                      style={{ ...customInputStyle, paddingLeft: '22px', paddingRight: '6px', padding: '6px 6px 6px 20px', fontSize: '12px' }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const val = parseFloat(customBalInput);
+                      if (!isNaN(val) && val > 0) handleUpdateBalance(val);
+                    }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#059669' }}
+                    title="Add amount to balance"
+                  >
+                    + Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      const val = parseFloat(customBalInput);
+                      if (!isNaN(val) && val > 0) handleUpdateBalance(-val);
+                    }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#dc2626' }}
+                    title="Deduct amount from balance"
+                  >
+                    - Deduct
+                  </button>
+                  <button
+                    onClick={() => {
+                      const val = parseFloat(customBalInput);
+                      if (!isNaN(val) && val >= 0) {
+                        const updated = {
+                          ...selectedUser,
+                          balance: val,
+                          status: val <= 0 ? 'Paused (Zero Balance)' : 'Active'
+                        };
+                        setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+                        syncUserToServer(updated);
+                        triggerToast(`Balance set to $${val.toFixed(2)}`);
+                      }
+                    }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#0f172a' }}
+                    title="Set balance to exact amount"
+                  >
+                    Set Exact
+                  </button>
                 </div>
               </div>
 
@@ -1502,15 +1559,29 @@ export default function MasterControlPanel({ onBackToHome }) {
             {/* ─── TAB 4: SPAM & BUSINESS HOURS ─── */}
             {activeTab === 'spam_schedule' && (
               <div style={cardSectionStyle}>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
-                  Spam Protection & Operating Hours
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      Spam Protection & Operating Hours
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                      Configure individual rate limits, message limits, and auto-reply business hours.
+                    </p>
+                  </div>
+                  <button onClick={handleSaveSpamSchedule} style={solidPrimaryBtnStyle}>
+                    Save Spam & Hours Rules
+                  </button>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                  {/* Spam Settings */}
-                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Spam Protection Switch</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                  {/* Spam Rules Card */}
+                  <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
+                    {/* Master Spam Toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                      <div>
+                        <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>Master Spam Protection</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Enable all rate limiting & anti-spam rules</div>
+                      </div>
                       <CustomSwitch
                         checked={spamDraft.spamEnabled !== false}
                         onChange={(checked) => {
@@ -1520,52 +1591,111 @@ export default function MasterControlPanel({ onBackToHome }) {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
-                        <input
-                          type="number"
-                          value={spamDraft.cooldownSeconds ?? 90}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...customInputStyle, width: '80px' }}
-                        />
-                      </div>
+                    {spamDraft.spamEnabled !== false && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
+                        {/* Rule 1: Cooldown */}
+                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
+                            <div>
+                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Per-Contact Cooldown</span>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>Ignore rapid incoming texts from same number</div>
+                            </div>
+                            <CustomSwitch
+                              checked={spamDraft.cooldownEnabled !== false}
+                              onChange={(checked) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, cooldownEnabled: checked }));
+                              }}
+                            />
+                          </div>
+                          {spamDraft.cooldownEnabled !== false && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                              <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
+                              <input
+                                type="number"
+                                value={spamDraft.cooldownSeconds ?? 90}
+                                onChange={(e) => {
+                                  setEditFlags(prev => ({ ...prev, spam: true }));
+                                  setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
+                                }}
+                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
+                              />
+                            </div>
+                          )}
+                        </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>Max Replies in Window:</span>
-                        <input
-                          type="number"
-                          value={spamDraft.maxReplies ?? 3}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...customInputStyle, width: '80px' }}
-                        />
-                      </div>
+                        {/* Rule 2: Max Replies */}
+                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
+                            <div>
+                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Max Replies Cap</span>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>Limit consecutive auto-replies to one contact</div>
+                            </div>
+                            <CustomSwitch
+                              checked={spamDraft.maxRepliesEnabled !== false}
+                              onChange={(checked) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, maxRepliesEnabled: checked }));
+                              }}
+                            />
+                          </div>
+                          {spamDraft.maxRepliesEnabled !== false && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                              <span style={{ color: '#64748b' }}>Max Replies:</span>
+                              <input
+                                type="number"
+                                value={spamDraft.maxReplies ?? 3}
+                                onChange={(e) => {
+                                  setEditFlags(prev => ({ ...prev, spam: true }));
+                                  setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
+                                }}
+                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
+                              />
+                            </div>
+                          )}
+                        </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>Window (Minutes):</span>
-                        <input
-                          type="number"
-                          value={spamDraft.windowMinutes ?? 10}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...customInputStyle, width: '80px' }}
-                        />
+                        {/* Rule 3: Rolling Window */}
+                        <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
+                            <div>
+                              <span style={{ fontWeight: '700', color: '#0f172a' }}>Rolling Time Window</span>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>Reset conversation counter after time passes</div>
+                            </div>
+                            <CustomSwitch
+                              checked={spamDraft.windowEnabled !== false}
+                              onChange={(checked) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, windowEnabled: checked }));
+                              }}
+                            />
+                          </div>
+                          {spamDraft.windowEnabled !== false && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                              <span style={{ color: '#64748b' }}>Window (Minutes):</span>
+                              <input
+                                type="number"
+                                value={spamDraft.windowMinutes ?? 10}
+                                onChange={(e) => {
+                                  setEditFlags(prev => ({ ...prev, spam: true }));
+                                  setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
+                                }}
+                                style={{ ...customInputStyle, width: '80px', padding: '4px 8px' }}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Business Hours */}
-                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Operating Hours Filter</span>
+                  {/* Business Hours & Schedule Card */}
+                  <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                      <div>
+                        <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>Operating Hours Filter</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Restrict auto-reply to specific hours or after-hours</div>
+                      </div>
                       <CustomSwitch
                         checked={spamDraft.scheduleEnabled === true}
                         onChange={(checked) => {
@@ -1575,63 +1705,129 @@ export default function MasterControlPanel({ onBackToHome }) {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>Start / End Time:</span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <input
-                            type="time"
-                            value={spamDraft.scheduleStart || '09:00'}
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
-                            }}
-                            style={{ ...customInputStyle, width: '90px' }}
-                          />
-                          <input
-                            type="time"
-                            value={spamDraft.scheduleEnd || '18:00'}
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
-                            }}
-                            style={{ ...customInputStyle, width: '90px' }}
-                          />
+                    {spamDraft.scheduleEnabled === true && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
+                        {/* Mode Chips */}
+                        <div>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Schedule Mode:</span>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, scheduleMode: 'ONLY_DURING' }));
+                              }}
+                              style={{
+                                background: (spamDraft.scheduleMode || 'ONLY_DURING') === 'ONLY_DURING' ? '#0f172a' : '#ffffff',
+                                border: (spamDraft.scheduleMode || 'ONLY_DURING') === 'ONLY_DURING' ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
+                                color: (spamDraft.scheduleMode || 'ONLY_DURING') === 'ONLY_DURING' ? '#ffffff' : '#475569',
+                                borderRadius: '8px',
+                                padding: '6px 12px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              During Hours Only
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, scheduleMode: 'ONLY_OUTSIDE' }));
+                              }}
+                              style={{
+                                background: spamDraft.scheduleMode === 'ONLY_OUTSIDE' ? '#0f172a' : '#ffffff',
+                                border: spamDraft.scheduleMode === 'ONLY_OUTSIDE' ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
+                                color: spamDraft.scheduleMode === 'ONLY_OUTSIDE' ? '#ffffff' : '#475569',
+                                borderRadius: '8px',
+                                padding: '6px 12px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              After-Hours Receptionist
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Active Days:</span>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                            const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                            const isSelected = days.includes(day);
-                            return (
-                              <button
-                                key={day}
-                                onClick={() => {
-                                  const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
-                                  setEditFlags(prev => ({ ...prev, spam: true }));
-                                  setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
-                                }}
-                                style={{
-                                  background: isSelected ? '#0f172a' : '#ffffff',
-                                  border: isSelected ? '1px solid #0f172a' : '1px solid #e2e8f0',
-                                  color: isSelected ? '#ffffff' : '#64748b',
-                                  borderRadius: '6px',
-                                  padding: '3px 8px',
-                                  fontSize: '11px',
-                                  fontWeight: '700',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {day}
-                              </button>
-                            );
-                          })}
+                        {/* Start & End Time */}
+                        <div>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Hours Range:</span>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                              type="time"
+                              value={spamDraft.scheduleStart || '09:00'}
+                              onChange={(e) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
+                              }}
+                              style={{ ...customInputStyle, width: '100px' }}
+                            />
+                            <span style={{ color: '#94a3b8' }}>to</span>
+                            <input
+                              type="time"
+                              value={spamDraft.scheduleEnd || '18:00'}
+                              onChange={(e) => {
+                                setEditFlags(prev => ({ ...prev, spam: true }));
+                                setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
+                              }}
+                              style={{ ...customInputStyle, width: '100px' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Active Days */}
+                        <div>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Active Days:</span>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                              const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                              const isSelected = days.includes(day);
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
+                                    setEditFlags(prev => ({ ...prev, spam: true }));
+                                    setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
+                                  }}
+                                  style={{
+                                    background: isSelected ? '#0f172a' : '#ffffff',
+                                    border: isSelected ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                                    color: isSelected ? '#ffffff' : '#64748b',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {day}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Out of Hours Message */}
+                        <div>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Out-of-Hours Reply Message:</span>
+                          <textarea
+                            rows={2}
+                            value={spamDraft.outOfHoursMsg || ''}
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, outOfHoursMsg: e.target.value }));
+                            }}
+                            placeholder="Thanks for contacting us! We are currently closed."
+                            style={{ ...customInputStyle, resize: 'vertical' }}
+                          />
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
