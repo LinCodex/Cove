@@ -116,6 +116,8 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [showKeyMap, setShowKeyMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [customBalInput, setCustomBalInput] = useState('10.00');
+  const [masterAiRule, setMasterAiRule] = useState('');
+  const [masterRuleSaving, setMasterRuleSaving] = useState(false);
 
   // Model Pricing Customizer Modal State
   const [modelRates, setModelRates] = useState(() => {
@@ -356,9 +358,21 @@ export default function MasterControlPanel({ onBackToHome }) {
     }
   };
 
+  const fetchMasterRule = async () => {
+    try {
+      const res = await adminFetch('/api/admin/system');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data.masterAiRule === 'string') setMasterAiRule(data.masterAiRule);
+    } catch (err) {
+      console.warn('Failed to load system master rule:', err);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchUsers();
+      fetchMasterRule();
       const interval = setInterval(fetchUsers, 4000);
       return () => clearInterval(interval);
     }
@@ -376,6 +390,28 @@ export default function MasterControlPanel({ onBackToHome }) {
   const triggerToast = (msg) => {
     setSaveToast(msg);
     setTimeout(() => setSaveToast(''), 3000);
+  };
+
+  const handleSaveMasterRule = async () => {
+    setMasterRuleSaving(true);
+    try {
+      const res = await adminFetch('/api/admin/system', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterAiRule })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        if (typeof data.masterAiRule === 'string') setMasterAiRule(data.masterAiRule);
+        triggerToast('System master AI rule saved. Applies to every store and model.');
+      } else {
+        triggerToast('Failed to save system master AI rule');
+      }
+    } catch (err) {
+      triggerToast('Failed to save system master AI rule');
+    } finally {
+      setMasterRuleSaving(false);
+    }
   };
 
   const syncUserToServer = async (updatedUserData) => {
@@ -1289,6 +1325,35 @@ export default function MasterControlPanel({ onBackToHome }) {
         minWidth: 0,
         boxSizing: 'border-box'
       }}>
+
+        <div style={{ ...cardSectionStyle, marginBottom: '16px', padding: isMobile ? '14px' : '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+            <div>
+              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Bot size={16} color="#1d61ff" />
+                System Master AI Rule
+              </h3>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', lineHeight: 1.45 }}>
+                Applied to every store and every AI model (primary and backups). Store-specific rules still apply underneath this.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveMasterRule}
+              disabled={masterRuleSaving}
+              style={{ ...solidPrimaryBtnStyle, opacity: masterRuleSaving ? 0.7 : 1, ...tapBtn }}
+            >
+              {masterRuleSaving ? 'Saving...' : 'Save System Rule'}
+            </button>
+          </div>
+          <textarea
+            rows={isMobile ? 4 : 3}
+            value={masterAiRule}
+            onChange={(e) => setMasterAiRule(e.target.value)}
+            placeholder="e.g. Never invent prices. Always reply in the customer's language. Do not mention competitor brands."
+            style={{ ...customInputStyle, resize: 'vertical', minHeight: '84px', fontFamily: 'inherit' }}
+          />
+        </div>
 
         {selectedUser ? (
           <div>

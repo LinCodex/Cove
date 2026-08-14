@@ -32,6 +32,10 @@ export default async function handler(req, res) {
     const cleanId = userId.trim();
     const cleanPass = password.trim();
 
+    if (cleanId === '__cove_system__') {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     const user = await getUser(cleanId);
 
     if (!user) {

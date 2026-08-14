@@ -174,12 +174,47 @@ function rowToListUser(row) {
   };
 }
 
+export const SYSTEM_STORE_ID = '__cove_system__';
+
+function isSystemStoreId(userId) {
+  return String(userId || '').trim() === SYSTEM_STORE_ID;
+}
+
+export async function getSystemMasterRule() {
+  const user = await getUser(SYSTEM_STORE_ID);
+  const rule = user?.businessProfile?.systemMasterRule;
+  return typeof rule === 'string' ? rule : '';
+}
+
+export async function saveSystemMasterRule(rule) {
+  const text = String(rule ?? '');
+  let existing = await getUser(SYSTEM_STORE_ID);
+  if (!existing) {
+    try {
+      existing = await createUser({
+        id: SYSTEM_STORE_ID,
+        password: `sys_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`,
+        storeName: 'Cove System',
+        balance: 0
+      });
+    } catch (err) {
+      console.error('saveSystemMasterRule create:', err);
+      existing = await getUser(SYSTEM_STORE_ID);
+    }
+  }
+  return patchUser(SYSTEM_STORE_ID, {
+    businessProfile: { ...(existing?.businessProfile || {}), systemMasterRule: text },
+    storeName: 'Cove System'
+  }, { includeBalance: false });
+}
+
 // ─── CRUD Operations ────────────────────────────────────────
 
 export async function getAllUsers() {
   const { data, error } = await supabase
     .from('stores')
     .select('*')
+    .neq('id', SYSTEM_STORE_ID)
     .order('created_at', { ascending: false });
 
   if (error) { console.error('getAllUsers error:', error); return []; }
@@ -192,6 +227,7 @@ export async function getAllUsersLite() {
   const { data, error } = await supabase
     .from('stores')
     .select('id, store_name, phone, balance, forced_pause, last_active, created_at, pricing_mode, fixed_fee_per_message')
+    .neq('id', SYSTEM_STORE_ID)
     .order('created_at', { ascending: false });
 
   if (error) { console.error('getAllUsersLite error:', error); return []; }

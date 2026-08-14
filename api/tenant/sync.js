@@ -1,4 +1,4 @@
-import { getUser, patchUser, addActivities, parseBody, mergeAiConfig } from '../_db.js';
+import { getUser, patchUser, addActivities, parseBody, mergeAiConfig, getSystemMasterRule, SYSTEM_STORE_ID } from '../_db.js';
 import { requireStoreAuth } from '../_adminAuth.js';
 
 function storeRev(user) {
@@ -35,6 +35,7 @@ function apkPayload(user) {
     aiConfig: user.aiConfig || {},
     blacklist: user.blacklist || [],
     balanceHistory: (user.balanceHistory || []).slice(0, 80),
+    systemMasterRule: user.systemMasterRule || '',
     serverTime: Date.now()
   };
 }
@@ -63,13 +64,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
+  if (String(userId).trim() === SYSTEM_STORE_ID) {
+    return res.status(404).json({ error: 'User account not found on master server' });
+  }
+
   if (!requireStoreAuth(req, res, String(userId).trim(), body.token || '')) return;
 
   try {
-    let user = await getUser(userId);
+    const [storeUser, masterAiRule] = await Promise.all([
+      getUser(userId),
+      getSystemMasterRule()
+    ]);
+    let user = storeUser;
     if (!user) {
       return res.status(404).json({ error: 'User account not found on master server' });
     }
+    user = { ...user, systemMasterRule: masterAiRule };
 
     const recentLogs = Array.isArray(body.recentLogs) ? body.recentLogs.slice(0, 50) : [];
     const recentTx = Array.isArray(body.recentTx) ? body.recentTx.slice(0, 50) : [];
@@ -85,6 +95,7 @@ export default async function handler(req, res) {
         balance: user.balance,
         forcedPause: Boolean(user.forcedPause),
         updatedAt: storeRev(user),
+        systemMasterRule: masterAiRule,
         serverTime: Date.now()
       });
     }
@@ -166,7 +177,7 @@ export default async function handler(req, res) {
 
     // No empty last_active heartbeat — that was a write on every poll.
 
-    return res.status(200).json(apkPayload(user));
+    return res.status(200).json(apkPayload({ ...user, systemMasterRule: masterAiRule }));
   } catch (error) {
     console.error('Tenant sync error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
