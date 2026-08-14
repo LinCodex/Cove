@@ -120,8 +120,6 @@ export default function MasterControlPanel({ onBackToHome }) {
   // Draft States for current store
   const [profileDraft, setProfileDraft] = useState({ 
     storeName: '', 
-    phone: '', 
-    address: '', 
     businessInfo: '', 
     replyTone: '', 
     aiRules: '' 
@@ -152,8 +150,6 @@ export default function MasterControlPanel({ onBackToHome }) {
     if (u) {
       setProfileDraft(prev => editFlags.profile ? prev : { 
         storeName: u.storeName || u.id, 
-        phone: u.phone || '', 
-        address: u.address || '', 
         businessInfo: u.businessProfile?.businessInfo || '', 
         replyTone: u.businessProfile?.replyTone || 'Professional, friendly, and concise', 
         aiRules: u.businessProfile?.aiRules || '' 
@@ -531,8 +527,6 @@ export default function MasterControlPanel({ onBackToHome }) {
     const updated = { 
       ...selectedUser, 
       storeName: profileDraft.storeName,
-      phone: profileDraft.phone,
-      address: profileDraft.address,
       businessProfile: {
         businessName: profileDraft.storeName,
         businessInfo: profileDraft.businessInfo,
@@ -1176,45 +1170,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                  <div>
-                    <label style={formLabelStyle}>Store / Business Name</label>
-                    <input
-                      type="text"
-                      value={profileDraft.storeName || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, storeName: e.target.value }));
-                      }}
-                      style={customInputStyle}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={formLabelStyle}>Phone Number</label>
-                    <input
-                      type="text"
-                      value={profileDraft.phone || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, phone: e.target.value }));
-                      }}
-                      placeholder="+1 (555) 000-0000"
-                      style={customInputStyle}
-                    />
-                  </div>
-                </div>
-
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={formLabelStyle}>Physical Store Address</label>
+                  <label style={formLabelStyle}>Store / Business Name</label>
                   <input
                     type="text"
-                    value={profileDraft.address || ''}
+                    value={profileDraft.storeName || ''}
                     onChange={(e) => {
                       setEditFlags(prev => ({ ...prev, profile: true }));
-                      setProfileDraft(prev => ({ ...prev, address: e.target.value }));
+                      setProfileDraft(prev => ({ ...prev, storeName: e.target.value }));
                     }}
-                    placeholder="e.g. 123 Market St, San Francisco, CA"
+                    placeholder="e.g. Downtown Bakery"
                     style={customInputStyle}
                   />
                 </div>
@@ -2464,17 +2429,6 @@ export default function MasterControlPanel({ onBackToHome }) {
                   placeholder="e.g. Downtown Bakery"
                   value={newStoreName}
                   onChange={(e) => setNewStoreName(e.target.value)}
-                  style={customInputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={formLabelStyle}>Phone Number</label>
-                <input
-                  type="text"
-                  placeholder="+1 (555) 000-0000"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
                   style={customInputStyle}
                 />
               </div>
