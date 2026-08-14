@@ -27,26 +27,28 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { recentLogs, recentTx, businessProfile, spamConfig, aiConfig, blacklist, storeName, phone } = body;
+      const { recentLogs, recentTx, businessProfile, spamConfig, aiConfig, blacklist, storeName, phone, clientEdited } = body;
 
-      // 1. If APK reports configuration updates, persist to store
-      if (businessProfile && typeof businessProfile === 'object') {
-        user.businessProfile = { ...(user.businessProfile || {}), ...businessProfile };
-      }
-      if (spamConfig && typeof spamConfig === 'object') {
-        user.spamConfig = { ...(user.spamConfig || {}), ...spamConfig };
-      }
-      if (aiConfig && typeof aiConfig === 'object') {
-        user.aiConfig = { ...(user.aiConfig || {}), ...aiConfig };
-      }
-      if (Array.isArray(blacklist)) {
-        user.blacklist = blacklist;
-      }
-      if (storeName && typeof storeName === 'string') {
-        user.storeName = storeName.trim();
-      }
-      if (phone && typeof phone === 'string') {
-        user.phone = phone.trim();
+      // 1. Only update store settings when APK explicitly sends an intentional edit
+      if (clientEdited === true) {
+        if (businessProfile && typeof businessProfile === 'object') {
+          user.businessProfile = { ...(user.businessProfile || {}), ...businessProfile };
+        }
+        if (spamConfig && typeof spamConfig === 'object') {
+          user.spamConfig = { ...(user.spamConfig || {}), ...spamConfig };
+        }
+        if (aiConfig && typeof aiConfig === 'object') {
+          user.aiConfig = { ...(user.aiConfig || {}), ...aiConfig };
+        }
+        if (Array.isArray(blacklist)) {
+          user.blacklist = blacklist;
+        }
+        if (storeName && typeof storeName === 'string') {
+          user.storeName = storeName.trim();
+        }
+        if (phone && typeof phone === 'string') {
+          user.phone = phone.trim();
+        }
       }
 
       // 2. If APK reports recent activity logs, record them in activities table
