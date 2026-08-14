@@ -56,6 +56,55 @@ function derivedStatus(balance, forcedPause) {
   return (parseFloat(balance) || 0) <= 0 ? 'Paused (Zero Balance)' : 'Active';
 }
 
+export function isRedactedSecret(value) {
+  if (value == null) return true;
+  const s = String(value).trim();
+  return s === '' || s.includes('•');
+}
+
+export function mergeAiConfig(existing = {}, incoming = {}) {
+  const keepKey = (next, prev) => (isRedactedSecret(next) ? (prev || '') : next);
+  const mergeSlot = (prevSlot, nextSlot) => {
+    if (!nextSlot || typeof nextSlot !== 'object') return prevSlot;
+    return {
+      ...(prevSlot || {}),
+      ...nextSlot,
+      apiKey: keepKey(nextSlot.apiKey, prevSlot?.apiKey)
+    };
+  };
+  return {
+    ...(existing || {}),
+    ...incoming,
+    apiKey: keepKey(incoming.apiKey, existing?.apiKey),
+    backupSlot1: mergeSlot(existing?.backupSlot1, incoming.backupSlot1),
+    backupSlot2: mergeSlot(existing?.backupSlot2, incoming.backupSlot2),
+    backupSlot3: mergeSlot(existing?.backupSlot3, incoming.backupSlot3),
+    backupSlot4: mergeSlot(existing?.backupSlot4, incoming.backupSlot4),
+    backupSlot5: mergeSlot(existing?.backupSlot5, incoming.backupSlot5)
+  };
+}
+
+export function redactUserForList(user) {
+  if (!user) return user;
+  const hideSlot = (slot) => {
+    if (!slot || typeof slot !== 'object') return slot;
+    return { ...slot, apiKey: slot.apiKey ? '••••' : '' };
+  };
+  return {
+    ...user,
+    password: user.password ? '••••' : '',
+    aiConfig: {
+      ...(user.aiConfig || {}),
+      apiKey: user.aiConfig?.apiKey ? '••••' : '',
+      backupSlot1: hideSlot(user.aiConfig?.backupSlot1),
+      backupSlot2: hideSlot(user.aiConfig?.backupSlot2),
+      backupSlot3: hideSlot(user.aiConfig?.backupSlot3),
+      backupSlot4: hideSlot(user.aiConfig?.backupSlot4),
+      backupSlot5: hideSlot(user.aiConfig?.backupSlot5)
+    }
+  };
+}
+
 /**
  * Convert API/frontend user object into Supabase row shape.
  * Balance columns are omitted unless includeBalance is true, so config saves
@@ -64,7 +113,9 @@ function derivedStatus(balance, forcedPause) {
 function userToRow(user, { includeBalance = true } = {}) {
   const row = {};
   if (user.id != null) row.id = user.id;
-  if (user.password != null) row.password = user.password;
+  if (user.password != null && String(user.password).trim() !== '' && !isRedactedSecret(user.password)) {
+    row.password = user.password;
+  }
   if (user.storeName != null || user.store_name != null) row.store_name = user.storeName ?? user.store_name;
   if (user.phone != null) row.phone = user.phone;
   if (user.address != null) row.address = user.address;
@@ -80,16 +131,47 @@ function userToRow(user, { includeBalance = true } = {}) {
   }
   if (user.forcedPause != null) row.forced_pause = Boolean(user.forcedPause);
   if (user.pricingMode != null || user.pricing_mode != null) row.pricing_mode = user.pricingMode ?? user.pricing_mode;
-  if (user.fixedFeePerMessage != null || user.fixed_fee_per_message != null) row.fixed_fee_per_message = parseFloat(user.fixedFeePerMessage ?? user.fixed_fee_per_message) || 0.0050;
-  if (user.customInputPrice1M != null || user.custom_input_price_1m != null) row.custom_input_price_1m = parseFloat(user.customInputPrice1M ?? user.custom_input_price_1m) || 0.25;
-  if (user.customOutputPrice1M != null || user.custom_output_price_1m != null) row.custom_output_price_1m = parseFloat(user.customOutputPrice1M ?? user.custom_output_price_1m) || 1.50;
+  if (user.fixedFeePerMessage != null || user.fixed_fee_per_message != null) {
+    const n = parseFloat(user.fixedFeePerMessage ?? user.fixed_fee_per_message);
+    if (Number.isFinite(n)) row.fixed_fee_per_message = n;
+  }
+  if (user.customInputPrice1M != null || user.custom_input_price_1m != null) {
+    const n = parseFloat(user.customInputPrice1M ?? user.custom_input_price_1m);
+    if (Number.isFinite(n)) row.custom_input_price_1m = n;
+  }
+  if (user.customOutputPrice1M != null || user.custom_output_price_1m != null) {
+    const n = parseFloat(user.customOutputPrice1M ?? user.custom_output_price_1m);
+    if (Number.isFinite(n)) row.custom_output_price_1m = n;
+  }
   if (user.totalRequests != null || user.total_requests != null) row.total_requests = parseInt(user.totalRequests ?? user.total_requests) || 0;
   if (user.businessProfile != null || user.business_profile != null) row.business_profile = user.businessProfile ?? user.business_profile;
   if (user.spamConfig != null || user.spam_config != null) row.spam_config = user.spamConfig ?? user.spam_config;
-  if (user.aiConfig != null || user.ai_config != null) row.ai_config = user.aiConfig ?? user.ai_config;
+  if (user.aiConfig != null || user.ai_config != null) {
+    const incoming = user.aiConfig ?? user.ai_config;
+    row.ai_config = incoming;
+  }
   if (user.blacklist != null) row.blacklist = user.blacklist;
   row.last_active = new Date().toISOString();
   return row;
+}
+
+function rowToListUser(row) {
+  return {
+    id: row.id,
+    storeName: row.store_name,
+    phone: row.phone || '',
+    balance: Number.isFinite(parseFloat(row.balance)) ? parseFloat(row.balance) : 0,
+    status: Boolean(row.forced_pause)
+      ? 'Force Paused'
+      : ((Number.isFinite(parseFloat(row.balance)) ? parseFloat(row.balance) : 0) <= 0
+        ? 'Paused (Zero Balance)'
+        : 'Active'),
+    forcedPause: Boolean(row.forced_pause),
+    lastActive: row.last_active ? new Date(row.last_active).getTime() : 0,
+    pricingMode: row.pricing_mode,
+    fixedFeePerMessage: parseFloat(row.fixed_fee_per_message),
+    createdAt: row.created_at
+  };
 }
 
 // ─── CRUD Operations ────────────────────────────────────────
@@ -102,29 +184,19 @@ export async function getAllUsers() {
 
   if (error) { console.error('getAllUsers error:', error); return []; }
 
-  // For each store, load recent activities (latest 100)
-  const users = (data || []).map(rowToUser);
-  for (const u of users) {
-    const { data: acts } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('store_id', u.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
+  return (data || []).map(rowToUser);
+}
 
-    u.activities = (acts || []).map(a => ({
-      id: a.id,
-      time: new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      sender: a.sender,
-      incoming: a.incoming,
-      reply: a.reply,
-      status: a.status,
-      tokensIn: a.tokens_in,
-      tokensOut: a.tokens_out,
-      cost: parseFloat(a.cost)
-    }));
-  }
-  return users;
+/** Sidebar/list poll — skips secrets, FAQ, keys, and ledger JSON. */
+export async function getAllUsersLite() {
+  const { data, error } = await supabase
+    .from('stores')
+    .select('id, store_name, phone, balance, forced_pause, last_active, created_at, pricing_mode, fixed_fee_per_message')
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('getAllUsersLite error:', error); return []; }
+
+  return (data || []).map(rowToListUser);
 }
 
 export async function getUser(userId) {
@@ -257,16 +329,20 @@ export async function applyBalanceChange(userId, { delta = null, absolute = null
 
 export async function createUser(userData) {
   const userId = userData.id.trim();
+  const parsedBal = parseFloat(userData.balance);
+  const initialBal = Number.isFinite(parsedBal) ? parsedBal : 10.00;
+  const parsedFee = parseFloat(userData.fixedFeePerMessage);
+  const initialFee = Number.isFinite(parsedFee) ? parsedFee : 0.0050;
   const newUser = {
     id: userId,
     password: userData.password.trim(),
     storeName: userData.storeName?.trim() || userId,
     phone: userData.phone?.trim() || '',
     address: userData.address?.trim() || '',
-    balance: parseFloat(userData.balance) || 10.00,
-    status: (parseFloat(userData.balance) || 10.00) <= 0 ? 'Paused (Zero Balance)' : 'Active',
+    balance: initialBal,
+    status: initialBal <= 0 ? 'Paused (Zero Balance)' : 'Active',
     pricingMode: userData.pricingMode || 'fixed_fee',
-    fixedFeePerMessage: parseFloat(userData.fixedFeePerMessage) || 0.0050,
+    fixedFeePerMessage: initialFee,
     customInputPrice1M: parseFloat(userData.customInputPrice1M) || 0.25,
     customOutputPrice1M: parseFloat(userData.customOutputPrice1M) || 1.50,
     totalRequests: 0,
@@ -299,8 +375,8 @@ export async function createUser(userData) {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString(),
         type: 'Deposit',
-        amount: parseFloat(userData.balance) || 10.00,
-        balanceAfter: parseFloat(userData.balance) || 10.00,
+        amount: initialBal,
+        balanceAfter: initialBal,
         description: 'Initial store signup balance'
       }
     ]
@@ -336,7 +412,7 @@ export async function deleteUser(userId) {
 export async function addActivities(storeId, logs) {
   if (!storeId || !Array.isArray(logs) || logs.length === 0) return;
 
-  const rows = logs.map(l => ({
+  const rows = logs.slice(0, 50).map(l => ({
     id: String(l.id || `act_${Date.now()}_${Math.random().toString(36).slice(2)}`),
     store_id: storeId,
     sender: l.sender || 'Customer',

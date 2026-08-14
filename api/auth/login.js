@@ -1,4 +1,5 @@
 import { getUser, parseBody } from '../_db.js';
+import { createStoreToken } from '../_adminAuth.js';
 
 export default async function handler(req, res) {
   // CORS Headers for Android APK & Web Clients
@@ -34,14 +35,14 @@ export default async function handler(req, res) {
     const user = await getUser(cleanId);
 
     if (!user) {
-      return res.status(401).json({ error: 'Account not found. Please contact your administrator.' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (user.password !== cleanPass) {
-      return res.status(401).json({ error: 'Incorrect password for this User ID' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = `cove_jwt_${cleanId}_${Date.now()}`;
+    const token = createStoreToken(cleanId) || `cove_jwt_${cleanId}_${Date.now()}`;
 
     return res.status(200).json({
       success: true,
@@ -62,6 +63,6 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

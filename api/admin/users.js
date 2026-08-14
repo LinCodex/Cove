@@ -1,4 +1,5 @@
-import { getAllUsers, getUser, saveUser, createUser, deleteUser, parseBody, applyBalanceChange } from '../_db.js';
+import { getAllUsersLite, getUser, saveUser, createUser, deleteUser, parseBody, applyBalanceChange, getActivities, mergeAiConfig, isRedactedSecret } from '../_db.js';
+import { requireAdmin } from '../_adminAuth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -18,9 +19,21 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (!requireAdmin(req, res)) return;
+
   try {
     if (req.method === 'GET') {
-      const users = await getAllUsers();
+      const userId = req.query.id || req.query.userId;
+      if (userId) {
+        const [user, activities] = await Promise.all([
+          getUser(String(userId)),
+          getActivities(String(userId).trim(), 200)
+        ]);
+        if (!user) return res.status(404).json({ error: 'Store account not found' });
+        user.activities = activities;
+        return res.status(200).json({ success: true, user });
+      }
+      const users = await getAllUsersLite();
       return res.status(200).json({ success: true, users });
     }
 
@@ -63,15 +76,20 @@ export default async function handler(req, res) {
         const targetId = data.oldId || data.id;
         let user = await getUser(targetId);
         if (!user) {
-          user = await createUser(data);
-        } else {
-          user = { ...user, ...data };
-          const ok = await saveUser(user, data.oldId);
-          if (!ok) {
-            return res.status(500).json({ error: 'Failed to update store in database' });
-          }
-          user = await getUser(data.id || targetId);
+          return res.status(404).json({ error: 'Store account not found' });
         }
+        if (data.aiConfig) {
+          data.aiConfig = mergeAiConfig(user.aiConfig, data.aiConfig);
+        }
+        if (isRedactedSecret(data.password)) {
+          delete data.password;
+        }
+        user = { ...user, ...data };
+        const ok = await saveUser(user, data.oldId);
+        if (!ok) {
+          return res.status(500).json({ error: 'Failed to update store in database' });
+        }
+        user = await getUser(data.id || targetId);
         return res.status(200).json({ success: true, user });
       }
 
@@ -81,6 +99,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (error) {
     console.error('Admin users API error:', error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

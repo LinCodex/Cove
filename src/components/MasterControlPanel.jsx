@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
+  Menu,
   Search, 
   DollarSign, 
   MessageSquare, 
@@ -95,7 +96,7 @@ const DEFAULT_MODEL_RATES = {
 export default function MasterControlPanel({ onBackToHome }) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('cove_master_admin_auth') === 'true';
+    return Boolean(sessionStorage.getItem('cove_master_admin_token'));
   });
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -104,6 +105,10 @@ export default function MasterControlPanel({ onBackToHome }) {
   // Navigation and UI State
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'ai_keys', 'activity', 'spam_schedule', 'pricing', 'blacklist'
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
+  const [storeDrawerOpen, setStoreDrawerOpen] = useState(false);
   const [activityFilter, setActivityFilter] = useState('all');
   const [saveToast, setSaveToast] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -183,6 +188,17 @@ export default function MasterControlPanel({ onBackToHome }) {
   }, [selectedUserId]);
 
   useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const apply = () => {
+      setIsMobile(mq.matches);
+      if (!mq.matches) setStoreDrawerOpen(false);
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  useEffect(() => {
     const u = users.find(usr => usr.id === selectedUserId);
     if (u) {
       setProfileDraft(prev => editFlags.profile ? prev : { 
@@ -233,12 +249,29 @@ export default function MasterControlPanel({ onBackToHome }) {
     }
   }, [selectedUserId, users, editFlags]);
 
+  const adminFetch = (url, options = {}) => {
+    const token = sessionStorage.getItem('cove_master_admin_token') || '';
+    return fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`
+      }
+    });
+  };
+
+  const clearAdminSession = () => {
+    sessionStorage.removeItem('cove_master_admin_token');
+    sessionStorage.removeItem('cove_master_admin_auth');
+    setIsAuthenticated(false);
+  };
+
   // Handle Master Admin Login
   const handleAdminAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError('');
-    const envPass = import.meta.env.VITE_MASTER_ADMIN_PASSWORD || 'Aa7185095888!';
 
     try {
       const res = await fetch('/api/admin/verify', {
@@ -247,7 +280,9 @@ export default function MasterControlPanel({ onBackToHome }) {
         body: JSON.stringify({ password: authPassword.trim() })
       });
 
-      if (res.ok) {
+      const resData = await res.json().catch(() => ({}));
+      if (res.ok && resData.token) {
+        sessionStorage.setItem('cove_master_admin_token', resData.token);
         sessionStorage.setItem('cove_master_admin_auth', 'true');
         setIsAuthenticated(true);
         setAuthPassword('');
@@ -255,49 +290,65 @@ export default function MasterControlPanel({ onBackToHome }) {
         fetchUsers();
         return;
       }
-    } catch (err) {
-      console.warn('API verify fallback to env:', err);
-    }
-
-    if (envPass && authPassword.trim() === envPass.trim()) {
-      sessionStorage.setItem('cove_master_admin_auth', 'true');
-      setIsAuthenticated(true);
-      setAuthPassword('');
-      fetchUsers();
-    } else {
       setAuthError('Incorrect Master Admin Password. Access Denied.');
+    } catch (err) {
+      console.warn('API verify failed:', err);
+      setAuthError('Unable to verify admin password. Try again.');
     }
     setAuthLoading(false);
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('cove_master_admin_auth');
-    setIsAuthenticated(false);
+    clearAdminSession();
   };
 
   // Fetch real users from backend API
-  const fetchUsers = async () => {
+  const fetchUserDetail = async (userId) => {
+    if (!userId) return;
     try {
-      const res = await fetch(`/api/admin/users?_t=${Date.now()}`, {
+      const res = await adminFetch(`/api/admin/users?id=${encodeURIComponent(userId)}&_t=${Date.now()}`, {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
       });
+      if (res.status === 401) {
+        clearAdminSession();
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.user?.id) {
+        setUsers(prev => prev.map(u => u.id === data.user.id ? { ...u, ...data.user } : u));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch store detail:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await adminFetch(`/api/admin/users?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+      });
+      if (res.status === 401) {
+        clearAdminSession();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.users && Array.isArray(data.users)) {
           setUsers(prev => {
-            const serverMap = new Map(data.users.map(u => [u.id, u]));
-            const merged = [...data.users];
-            prev.forEach(p => {
-              if (!serverMap.has(p.id)) {
-                merged.push(p);
-              }
+            const prevMap = new Map(prev.map(u => [u.id, u]));
+            return data.users.map(u => {
+              const old = prevMap.get(u.id);
+              // List payload is lightweight — keep secrets/profile/activity from the last detail fetch.
+              return old ? { ...old, ...u } : u;
             });
-            return merged;
           });
-          if (data.users.length > 0) {
-            setSelectedUserId(prev => (prev && data.users.some(u => u.id === prev)) ? prev : data.users[0].id);
-          }
+          setSelectedUserId(prev => {
+            if (prev && data.users.some(u => u.id === prev)) return prev;
+            return data.users[0]?.id || '';
+          });
         }
       }
     } catch (err) {
@@ -308,10 +359,17 @@ export default function MasterControlPanel({ onBackToHome }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchUsers();
-      const interval = setInterval(fetchUsers, 3000);
+      const interval = setInterval(fetchUsers, 4000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !selectedUserId) return;
+    fetchUserDetail(selectedUserId);
+    const interval = setInterval(() => fetchUserDetail(selectedUserId), 2500);
+    return () => clearInterval(interval);
+  }, [selectedUserId, isAuthenticated]);
 
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
 
@@ -323,14 +381,18 @@ export default function MasterControlPanel({ onBackToHome }) {
   const syncUserToServer = async (updatedUserData) => {
     try {
       const { balance, balanceHistory, status, ...configData } = updatedUserData || {};
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_user', data: configData })
       });
       const resData = await res.json().catch(() => ({}));
       if (res.ok && resData.success !== false) {
-        fetchUsers();
+        if (resData.user?.id) {
+          applyServerUser(resData.user);
+        } else if (updatedUserData?.id) {
+          fetchUserDetail(updatedUserData.id);
+        }
         return true;
       }
       console.error('Failed to sync to server:', resData.error || res.statusText);
@@ -352,7 +414,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     if (!Number.isFinite(numericDelta) || numericDelta === 0) return;
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -385,7 +447,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     if (!Number.isFinite(val) || val < 0) return;
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -418,7 +480,7 @@ export default function MasterControlPanel({ onBackToHome }) {
       return;
     }
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete_user', data: { id: userId } })
@@ -455,7 +517,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         pricingMode: 'fixed_fee'
       };
 
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create_user', data: payload })
@@ -788,6 +850,19 @@ export default function MasterControlPanel({ onBackToHome }) {
     (u.phone || '').includes(searchQuery)
   );
 
+  const colGrid = (minPx, gap = 12) => ({
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : `repeat(auto-fit, minmax(${minPx}px, 1fr))`,
+    gap: isMobile ? Math.min(gap, 10) : gap,
+    minWidth: 0,
+    width: '100%'
+  });
+
+  const tapBtn = {
+    minHeight: isMobile ? '44px' : undefined,
+    WebkitTapHighlightColor: 'transparent'
+  };
+
   // ─── AUTH SCREEN ───
   if (!isAuthenticated) {
     return (
@@ -797,14 +872,16 @@ export default function MasterControlPanel({ onBackToHome }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+        padding: isMobile ? '16px' : '20px',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        overflowX: 'hidden',
+        boxSizing: 'border-box'
       }}>
         <div style={{
           background: '#ffffff',
           border: '1px solid #e5e7eb',
-          borderRadius: '24px',
-          padding: '40px 32px',
+          borderRadius: isMobile ? '18px' : '24px',
+          padding: isMobile ? '28px 20px' : '40px 32px',
           width: '100%',
           maxWidth: '400px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.04)',
@@ -876,20 +953,30 @@ export default function MasterControlPanel({ onBackToHome }) {
   return (
     <div style={{
       minHeight: '100vh',
+      width: '100%',
+      maxWidth: '100vw',
       backgroundColor: '#f8fafc',
       color: '#0f172a',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       overflowX: 'hidden',
       boxSizing: 'border-box'
     }}>
+      <style>{`
+        html, body, #root { max-width: 100%; overflow-x: hidden; }
+        @media (max-width: 768px) {
+          html, body { overflow-x: hidden; }
+        }
+      `}</style>
 
       {/* Toast Notification */}
       {saveToast && (
         <div style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: isMobile ? '16px' : '24px',
+          left: isMobile ? '12px' : 'auto',
+          right: isMobile ? '12px' : '24px',
           background: '#0f172a',
           color: '#ffffff',
           padding: '12px 20px',
@@ -900,15 +987,111 @@ export default function MasterControlPanel({ onBackToHome }) {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          zIndex: 1000
+          zIndex: 1400,
+          maxWidth: isMobile ? 'calc(100vw - 24px)' : '420px',
+          wordBreak: 'break-word'
         }}>
           <CheckCircle2 size={16} color="#10b981" />
           <span>{saveToast}</span>
         </div>
       )}
 
+      {isMobile && (
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '10px 12px',
+          minHeight: '56px',
+          boxSizing: 'border-box',
+          width: '100%'
+        }}>
+          <button
+            type="button"
+            onClick={() => setStoreDrawerOpen(true)}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              ...tapBtn
+            }}
+            aria-label="Open store list"
+          >
+            <Menu size={18} color="#0f172a" />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Cove Control
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedUser ? (selectedUser.storeName || selectedUser.id) : 'Select a store'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+            aria-label="Create store account"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+      )}
+
+      {isMobile && storeDrawerOpen && (
+        <div
+          onClick={() => setStoreDrawerOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.45)',
+            zIndex: 1100
+          }}
+        />
+      )}
+
       {/* ─── SIDEBAR: STORE ACCOUNTS LIST ─── */}
-      <aside style={{
+      <aside style={isMobile ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 'min(88vw, 340px)',
+        maxWidth: '100vw',
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #f1f5f9',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1200,
+        transform: storeDrawerOpen ? 'translateX(0)' : 'translateX(-110%)',
+        transition: 'transform 0.22s ease',
+        boxShadow: storeDrawerOpen ? '8px 0 32px rgba(15,23,42,0.18)' : 'none',
+        boxSizing: 'border-box'
+      } : {
         width: '280px',
         backgroundColor: '#ffffff',
         borderRight: '1px solid #f1f5f9',
@@ -920,10 +1103,20 @@ export default function MasterControlPanel({ onBackToHome }) {
       }}>
         {/* Sidebar Header */}
         <div style={{ padding: '20px 16px 14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.3px' }}>
               Cove Control
             </span>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setStoreDrawerOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                aria-label="Close store list"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
 
           {/* Quick Search Store Input */}
@@ -955,7 +1148,10 @@ export default function MasterControlPanel({ onBackToHome }) {
 
           {/* New Store Button */}
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setShowCreateModal(true);
+              if (isMobile) setStoreDrawerOpen(false);
+            }}
             style={{
               width: '100%',
               background: '#0f172a',
@@ -1001,7 +1197,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               return (
                 <div
                   key={user.id}
-                  onClick={() => setSelectedUserId(user.id)}
+                  onClick={() => {
+                    setSelectedUserId(user.id);
+                    if (isMobile) setStoreDrawerOpen(false);
+                  }}
                   style={{
                     padding: '10px 12px',
                     borderRadius: '10px',
@@ -1041,7 +1240,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       }}>
                         {user.storeName || user.id}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                      <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         ID: {user.id}
                       </div>
                     </div>
@@ -1082,9 +1281,12 @@ export default function MasterControlPanel({ onBackToHome }) {
       {/* ─── MAIN CONTENT: STORE CONTROLS ON EACH PAGE ─── */}
       <main style={{
         flex: 1,
-        padding: '24px',
+        padding: isMobile ? '14px 12px 28px 12px' : '24px',
         overflowY: 'auto',
-        maxWidth: '1200px',
+        overflowX: 'hidden',
+        maxWidth: isMobile ? '100%' : '1200px',
+        width: '100%',
+        minWidth: 0,
         boxSizing: 'border-box'
       }}>
 
@@ -1094,14 +1296,15 @@ export default function MasterControlPanel({ onBackToHome }) {
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
+              alignItems: isMobile ? 'stretch' : 'center',
+              flexDirection: isMobile ? 'column' : 'row',
               marginBottom: '20px',
               flexWrap: 'wrap',
               gap: '12px'
             }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+              <div style={{ minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <h1 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: '#0f172a', margin: 0, wordBreak: 'break-word' }}>
                     {selectedUser.storeName || selectedUser.id}
                   </h1>
                   <span style={{
@@ -1116,7 +1319,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     {selectedUser.forcedPause ? '⛔ Force Paused by Admin' : ((selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active')}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px', flexWrap: 'wrap', wordBreak: 'break-word' }}>
                   <span>User ID: <strong>{selectedUser.id}</strong></span>
                   <span>APK Password: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
                     <button 
@@ -1131,7 +1334,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
 
               {/* Header Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
                 {/* Force Pause / Resume Auto-Reply Toggle */}
                 <button
                   onClick={() => {
@@ -1149,11 +1352,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                     background: selectedUser.forcedPause ? '#fee2e2' : '#f8fafc',
                     border: selectedUser.forcedPause ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                     borderRadius: '8px',
-                    padding: '6px 12px',
+                    padding: isMobile ? '10px 12px' : '6px 12px',
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
-                    color: selectedUser.forcedPause ? '#dc2626' : '#334155'
+                    color: selectedUser.forcedPause ? '#dc2626' : '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    flex: isMobile ? '1 1 calc(50% - 8px)' : undefined,
+                    justifyContent: 'center',
+                    ...tapBtn
                   }}
                 >
                   {selectedUser.forcedPause ? 'Resume Auto-Reply' : 'Force Pause APK'}
@@ -1170,14 +1378,17 @@ export default function MasterControlPanel({ onBackToHome }) {
                     background: '#ffffff',
                     border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    padding: '6px 12px',
+                    padding: isMobile ? '10px 12px' : '6px 12px',
                     fontSize: '12px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    color: '#0f172a'
+                    color: '#0f172a',
+                    flex: isMobile ? '1 1 calc(50% - 8px)' : undefined,
+                    justifyContent: 'center',
+                    ...tapBtn
                   }}
                 >
                   <Key size={13} color="#0f172a" />
@@ -1193,13 +1404,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                     background: '#ffffff',
                     border: '1px solid #e2e8f0',
                     borderRadius: '8px',
-                    padding: '6px 12px',
+                    padding: isMobile ? '10px 12px' : '6px 12px',
                     fontSize: '12px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    flex: isMobile ? '1 1 calc(50% - 8px)' : undefined,
+                    justifyContent: 'center',
+                    ...tapBtn
                   }}
                 >
                   <RefreshCw size={13} />
@@ -1213,13 +1427,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                     border: '1px solid #fecaca',
                     color: '#dc2626',
                     borderRadius: '8px',
-                    padding: '6px 12px',
+                    padding: isMobile ? '10px 12px' : '6px 12px',
                     fontSize: '12px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    flex: isMobile ? '1 1 calc(50% - 8px)' : undefined,
+                    justifyContent: 'center',
+                    ...tapBtn
                   }}
                 >
                   <Trash2 size={13} />
@@ -1230,18 +1447,16 @@ export default function MasterControlPanel({ onBackToHome }) {
 
             {/* 3 Real Telemetry Summary Cards */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '14px',
+              ...colGrid(240, 14),
               marginBottom: '20px'
             }}>
               {/* Card 1: Balance Controls with Custom Amount Input */}
               <div style={kpiCardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>
                     Account Balance
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     <button onClick={() => handleUpdateBalance(5.00)} style={pillBtnStyle}>+$5</button>
                     <button onClick={() => handleUpdateBalance(20.00)} style={pillBtnStyle}>+$20</button>
                     <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>Set $0</button>
@@ -1258,8 +1473,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
 
                 {/* Custom Dollar Amount Add/Deduct/Set Controls */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ position: 'relative', flex: '1 1 90px' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch', flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', flex: isMobile ? '1 1 100%' : '1 1 90px' }}>
                     <span style={{ position: 'absolute', left: '10px', top: '8px', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>$</span>
                     <input
                       type="number"
@@ -1275,7 +1490,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       const val = parseFloat(customBalInput);
                       if (!isNaN(val) && val > 0) handleUpdateBalance(val);
                     }}
-                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#059669' }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#059669', flex: isMobile ? 1 : undefined, ...tapBtn }}
                     title="Add amount to balance"
                   >
                     + Add
@@ -1285,7 +1500,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       const val = parseFloat(customBalInput);
                       if (!isNaN(val) && val > 0) handleUpdateBalance(-val);
                     }}
-                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#dc2626' }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#dc2626', flex: isMobile ? 1 : undefined, ...tapBtn }}
                     title="Deduct amount from balance"
                   >
                     - Deduct
@@ -1295,7 +1510,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       const val = parseFloat(customBalInput);
                       if (!isNaN(val) && val >= 0) handleSetExactBalance(val);
                     }}
-                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#0f172a' }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#0f172a', flex: isMobile ? 1 : undefined, ...tapBtn }}
                     title="Set balance to exact amount"
                   >
                     Set Exact
@@ -1340,13 +1555,13 @@ export default function MasterControlPanel({ onBackToHome }) {
               flexWrap: 'wrap'
             }}>
               {[
-                { id: 'profile', label: 'Store Profile & FAQ', icon: FileText },
-                { id: 'ai_keys', label: 'AI Keys & Backups', icon: Key },
-                { id: 'balance_history', label: 'Balance', icon: Receipt },
-                { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
-                { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
-                { id: 'pricing', label: 'Pricing & Rates', icon: DollarSign },
-                { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
+                { id: 'profile', label: 'Store Profile & FAQ', short: 'Profile', icon: FileText },
+                { id: 'ai_keys', label: 'AI Keys & Backups', short: 'AI Keys', icon: Key },
+                { id: 'balance_history', label: 'Balance', short: 'Balance', icon: Receipt },
+                { id: 'activity', label: 'Live SMS Activity', short: 'SMS Log', icon: MessageSquare },
+                { id: 'spam_schedule', label: 'Spam & Hours', short: 'Hours', icon: Clock },
+                { id: 'pricing', label: 'Pricing & Rates', short: 'Pricing', icon: DollarSign },
+                { id: 'blacklist', label: 'Manual Reply List', short: 'Manual List', icon: Ban }
               ].map(tab => {
                 const isActive = activeTab === tab.id;
                 const IconComp = tab.icon;
@@ -1359,18 +1574,22 @@ export default function MasterControlPanel({ onBackToHome }) {
                       color: isActive ? '#ffffff' : '#64748b',
                       border: isActive ? '1px solid #0f172a' : '1px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '8px 14px',
-                      fontSize: '12px',
+                      padding: isMobile ? '10px 12px' : '8px 14px',
+                      fontSize: isMobile ? '11px' : '12px',
                       fontWeight: '700',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '6px',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease',
+                      flex: isMobile ? '1 1 calc(50% - 6px)' : undefined,
+                      minWidth: 0,
+                      ...tapBtn
                     }}
                   >
                     <IconComp size={13} />
-                    <span>{tab.label}</span>
+                    <span>{isMobile ? tab.short : tab.label}</span>
                   </button>
                 );
               })}
@@ -1446,11 +1665,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', marginTop: '16px' }}>
                   <button 
                     onClick={handleSaveProfile} 
                     disabled={profileSaving} 
-                    style={{ ...solidPrimaryBtnStyle, opacity: profileSaving ? 0.7 : 1 }}
+                    style={{ ...solidPrimaryBtnStyle, opacity: profileSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
                     {profileSaving ? 'Saving & Syncing...' : 'Save Store Profile & Sync to APK'}
                   </button>
@@ -1554,7 +1773,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
 
                   {/* Model & Base URL Overrides */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ ...colGrid(220, 12), marginBottom: '14px' }}>
                     <div>
                       <label style={formLabelStyle}>Model Name</label>
                       <input
@@ -1751,7 +1970,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                               </div>
 
                               {/* Backup Slot Model & API Base URL */}
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                              <div style={colGrid(200, 10)}>
                                 <div>
                                   <label style={formLabelStyle}>Backup Model Name</label>
                                   <input
@@ -1794,11 +2013,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', marginTop: '16px' }}>
                   <button 
                     onClick={handleSaveAiConfig} 
                     disabled={aiSaving} 
-                    style={{ ...solidPrimaryBtnStyle, opacity: aiSaving ? 0.7 : 1 }}
+                    style={{ ...solidPrimaryBtnStyle, opacity: aiSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
                     {aiSaving ? 'Saving & Syncing...' : 'Save AI & Backup Keys to APK'}
                   </button>
@@ -1834,7 +2053,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
 
                 {/* Top Summary KPI Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '18px' }}>
+                <div style={{ ...colGrid(200, 12), marginBottom: '18px' }}>
                   <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
                       Current Available Balance
@@ -1884,7 +2103,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
 
                   {/* Custom Amount Form */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', alignItems: 'flex-end' }}>
+                  <div style={{ ...colGrid(180, 10), alignItems: 'flex-end' }}>
                     <div>
                       <label style={formLabelStyle}>Custom Amount ($)</label>
                       <input
@@ -1945,7 +2164,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>
                       Transaction History ({((selectedUser.balanceHistory || []).length)})
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {['all', 'topup', 'sms', 'adjustment'].map(f => (
                         <button
                           key={f}
@@ -1955,11 +2174,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                             color: balanceFilter === f ? '#ffffff' : '#64748b',
                             border: '1px solid #e2e8f0',
                             borderRadius: '6px',
-                            padding: '4px 10px',
+                            padding: isMobile ? '8px 10px' : '4px 10px',
                             fontSize: '11px',
                             fontWeight: '700',
                             cursor: 'pointer',
-                            textTransform: 'capitalize'
+                            textTransform: 'capitalize',
+                            flex: isMobile ? '1 1 calc(50% - 4px)' : undefined,
+                            ...tapBtn
                           }}
                         >
                           {f === 'topup' ? 'Top-Ups' : f === 'sms' ? 'SMS Replies' : f === 'adjustment' ? 'Adjustments' : 'All'}
@@ -1969,8 +2190,63 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
 
                   {/* Ledger Table */}
-                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '550px' }}>
+                  {(() => {
+                    const ledgerRows = (!selectedUser.balanceHistory || selectedUser.balanceHistory.length === 0)
+                      ? []
+                      : selectedUser.balanceHistory.filter(t => {
+                          const amt = parseFloat(t.amount) || 0;
+                          const type = (t.type || '').toLowerCase();
+                          if (balanceFilter === 'topup') return amt > 0 || type.includes('deposit') || type.includes('top');
+                          if (balanceFilter === 'sms') return amt < 0 && (type.includes('sms') || type.includes('reply'));
+                          if (balanceFilter === 'adjustment') return type.includes('adjustment') || (amt < 0 && !type.includes('sms'));
+                          return true;
+                        });
+                    const emptyMsg = 'No balance transactions recorded yet. Deposits and SMS deductions will appear here automatically.';
+                    if (isMobile) {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {ledgerRows.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '24px 12px', color: '#94a3b8', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                              {emptyMsg}
+                            </div>
+                          ) : ledgerRows.map((tx, idx) => {
+                            const amt = parseFloat(tx.amount) || 0;
+                            const isPositive = amt > 0;
+                            return (
+                              <div key={tx.id || idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    background: isPositive ? '#ecfdf5' : '#fef2f2',
+                                    color: isPositive ? '#059669' : '#dc2626',
+                                    border: `1px solid ${isPositive ? '#a7f3d0' : '#fecaca'}`
+                                  }}>
+                                    {isPositive ? 'Top-Up' : tx.type || 'Deduction'}
+                                  </span>
+                                  <span style={{ fontWeight: '800', color: isPositive ? '#059669' : '#dc2626', fontSize: '13px', flexShrink: 0 }}>
+                                    {isPositive ? `+$${amt.toFixed(4)}` : `-$${Math.abs(amt).toFixed(4)}`}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#475569', wordBreak: 'break-word', marginBottom: '8px' }}>
+                                  {tx.description || tx.recipientNumber || 'Balance change'}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '11px', color: '#94a3b8', flexWrap: 'wrap' }}>
+                                  <span>{tx.date || new Date(tx.timestampMillis || Date.now()).toLocaleDateString()} {tx.time || new Date(tx.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  <span style={{ color: '#0f172a', fontWeight: '600' }}>{tx.balanceAfter != null ? `After $${parseFloat(tx.balanceAfter).toFixed(4)}` : '—'}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                    return (
+                  <div style={{ overflowX: 'hidden', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
                           <th style={{ padding: '10px 14px' }}>Date & Time</th>
@@ -1981,23 +2257,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {(!selectedUser.balanceHistory || selectedUser.balanceHistory.length === 0) ? (
+                        {ledgerRows.length === 0 ? (
                           <tr>
                             <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
-                              No balance transactions recorded yet. Deposits and SMS deductions will appear here automatically.
+                              {emptyMsg}
                             </td>
                           </tr>
                         ) : (
-                          selectedUser.balanceHistory
-                            .filter(t => {
-                              const amt = parseFloat(t.amount) || 0;
-                              const type = (t.type || '').toLowerCase();
-                              if (balanceFilter === 'topup') return amt > 0 || type.includes('deposit') || type.includes('top');
-                              if (balanceFilter === 'sms') return amt < 0 && (type.includes('sms') || type.includes('reply'));
-                              if (balanceFilter === 'adjustment') return type.includes('adjustment') || (amt < 0 && !type.includes('sms'));
-                              return true;
-                            })
-                            .map((tx, idx) => {
+                          ledgerRows.map((tx, idx) => {
                               const amt = parseFloat(tx.amount) || 0;
                               const isPositive = amt > 0;
                               return (
@@ -2038,6 +2305,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                       </tbody>
                     </table>
                   </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -2049,7 +2318,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                     Live SMS Log ({selectedUser.activities?.length || 0})
                   </h3>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {['all', 'sent', 'blocked'].map(f => (
                       <button
                         key={f}
@@ -2059,11 +2328,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                           color: activityFilter === f ? '#ffffff' : '#64748b',
                           border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          padding: '4px 10px',
+                          padding: isMobile ? '8px 10px' : '4px 10px',
                           fontSize: '11px',
                           fontWeight: '700',
                           cursor: 'pointer',
-                          textTransform: 'capitalize'
+                          textTransform: 'capitalize',
+                          flex: isMobile ? 1 : undefined,
+                          ...tapBtn
                         }}
                       >
                         {f}
@@ -2094,19 +2365,19 @@ export default function MasterControlPanel({ onBackToHome }) {
                           flexDirection: 'column',
                           gap: '6px'
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{act.sender}</span>
-                            <span style={{ color: '#94a3b8' }}>{act.time}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', gap: '8px' }}>
+                            <span style={{ fontWeight: '700', color: '#0f172a', wordBreak: 'break-word' }}>{act.sender}</span>
+                            <span style={{ color: '#94a3b8', flexShrink: 0 }}>{act.time}</span>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '12px' }}>
+                          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', wordBreak: 'break-word' }}>
                             <strong>In:</strong> {act.incoming}
                           </div>
                           {act.reply && (
-                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#1d4ed8' }}>
+                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#1d4ed8', wordBreak: 'break-word' }}>
                               <strong>AI Reply:</strong> {act.reply}
                             </div>
                           )}
-                          <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b' }}>
+                          <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
                             <span>In: {act.tokensIn || 0} tokens</span>
                             <span>Out: {act.tokensOut || 0} tokens</span>
                             <span>Cost: ${(act.cost || 0.005).toFixed(4)}</span>
@@ -2133,7 +2404,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ ...colGrid(280, 16), marginBottom: '16px' }}>
                   {/* Spam Rules Card */}
                   <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
                     <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '14px' }}>
@@ -2143,7 +2414,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
                       {/* Rule 1: Cooldown */}
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
                           <div>
                             <span style={{ fontWeight: '700', color: '#0f172a' }}>Per-Contact Cooldown</span>
                             <div style={{ fontSize: '11px', color: '#64748b' }}>Ignore rapid incoming texts from same number</div>
@@ -2157,7 +2428,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           />
                         </div>
                         {spamDraft.cooldownEnabled !== false && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
                             <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
                             <input
                               type="number"
@@ -2174,7 +2445,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                       {/* Rule 2: Max Replies */}
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
                           <div>
                             <span style={{ fontWeight: '700', color: '#0f172a' }}>Max Replies Cap</span>
                             <div style={{ fontSize: '11px', color: '#64748b' }}>Limit consecutive auto-replies to one contact</div>
@@ -2188,7 +2459,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           />
                         </div>
                         {spamDraft.maxRepliesEnabled !== false && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
                             <span style={{ color: '#64748b' }}>Max Replies:</span>
                             <input
                               type="number"
@@ -2205,7 +2476,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                       {/* Rule 3: Rolling Window */}
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
                           <div>
                             <span style={{ fontWeight: '700', color: '#0f172a' }}>Rolling Time Window</span>
                             <div style={{ fontSize: '11px', color: '#64748b' }}>Reset conversation counter after time passes</div>
@@ -2219,7 +2490,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           />
                         </div>
                         {spamDraft.windowEnabled !== false && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
                             <span style={{ color: '#64748b' }}>Window (Minutes):</span>
                             <input
                               type="number"
@@ -2302,7 +2573,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         {/* Start & End Time */}
                         <div>
                           <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Hours Range:</span>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <input
                               type="time"
                               value={spamDraft.scheduleStart || '09:00'}
@@ -2310,7 +2581,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 setEditFlags(prev => ({ ...prev, spam: true }));
                                 setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
                               }}
-                              style={{ ...customInputStyle, width: '100px' }}
+                              style={{ ...customInputStyle, width: isMobile ? '100%' : '100px' }}
                             />
                             <span style={{ color: '#94a3b8' }}>to</span>
                             <input
@@ -2320,7 +2591,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 setEditFlags(prev => ({ ...prev, spam: true }));
                                 setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
                               }}
-                              style={{ ...customInputStyle, width: '100px' }}
+                              style={{ ...customInputStyle, width: isMobile ? '100%' : '100px' }}
                             />
                           </div>
                         </div>
@@ -2378,11 +2649,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', marginTop: '16px' }}>
                   <button 
                     onClick={handleSaveSpamSchedule} 
                     disabled={spamSaving} 
-                    style={{ ...solidPrimaryBtnStyle, opacity: spamSaving ? 0.7 : 1 }}
+                    style={{ ...solidPrimaryBtnStyle, opacity: spamSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
                     {spamSaving ? 'Saving & Syncing...' : 'Save Spam & Operating Hours'}
                   </button>
@@ -2451,7 +2722,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                  <div style={{ ...colGrid(280, 14), marginBottom: '20px' }}>
                     <div
                       onClick={() => {
                         setPricingDraft(prev => ({ ...prev, pricingMode: 'fixed_fee' }));
@@ -2489,7 +2760,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                             setPricingDraft(prev => ({ ...prev, fixedFeePerMessage: e.target.value }));
                             setEditFlags(prev => ({ ...prev, pricing: true }));
                           }}
-                          style={{ ...customInputStyle, width: '100px', fontWeight: '700' }}
+                          style={{ ...customInputStyle, width: isMobile ? '100%' : '100px', fontWeight: '700' }}
                         />
                         <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>/ reply</span>
                       </div>
@@ -2527,11 +2798,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
 
                   {/* Save Button for Pricing */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-start', marginBottom: '24px' }}>
                     <button
                       onClick={handleSavePricing}
                       disabled={pricingSaving}
-                      style={{ ...solidPrimaryBtnStyle, opacity: pricingSaving ? 0.7 : 1 }}
+                      style={{ ...solidPrimaryBtnStyle, opacity: pricingSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                     >
                       {pricingSaving ? 'Saving & Syncing...' : 'Save Pricing Settings & Sync to APK'}
                     </button>
@@ -2575,7 +2846,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     </div>
 
                     {/* 4 Analytics KPI Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ ...colGrid(200, 12), marginBottom: '16px' }}>
                       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                         <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
                           Total API Requests
@@ -2676,7 +2947,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </div>
 
                         {/* Filter Tabs */}
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           {[
                             { key: 'all', label: `All (${enrichedActivities.length})` },
                             { key: 'primary', label: `Primary AI (${primaryCount})` },
@@ -2690,10 +2961,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 color: rawUsageFilter === tab.key ? '#ffffff' : '#64748b',
                                 border: '1px solid #e2e8f0',
                                 borderRadius: '6px',
-                                padding: '4px 10px',
+                                padding: isMobile ? '8px 10px' : '4px 10px',
                                 fontSize: '11px',
                                 fontWeight: '700',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                flex: isMobile ? '1 1 auto' : undefined,
+                                ...tapBtn
                               }}
                             >
                               {tab.label}
@@ -2702,8 +2975,50 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </div>
                       </div>
 
-                      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '650px' }}>
+                      <div style={{ overflowX: 'hidden' }}>
+                        {isMobile ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {filteredRawActivities.length === 0 ? (
+                              <div style={{ textAlign: 'center', padding: '24px 12px', color: '#94a3b8', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                                No message executions found for this filter.
+                              </div>
+                            ) : filteredRawActivities.map((act, i) => (
+                              <div key={act.id || i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px', wordBreak: 'break-word' }}>{act.sender}</div>
+                                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{act.time || 'Just now'}</div>
+                                  </div>
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    background: act.rateInfo.isBackup ? '#eff6ff' : '#ecfdf5',
+                                    color: act.rateInfo.isBackup ? '#1d4ed8' : '#059669',
+                                    border: `1px solid ${act.rateInfo.isBackup ? '#bfdbfe' : '#a7f3d0'}`,
+                                    flexShrink: 0
+                                  }}>
+                                    {act.rateInfo.label}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#0f172a', marginBottom: '8px' }}>
+                                  {act.inT} in • {act.outT} out <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', fontSize: '11px' }}>
+                                  <span style={{ color: '#dc2626', fontWeight: '700' }}>Cost ${act.rawMsgCost.toFixed(6)}</span>
+                                  <span style={{ color: '#0f172a', fontWeight: '700' }}>Billed ${act.billedCost.toFixed(4)}</span>
+                                  <span style={{ fontWeight: '700', color: act.margin >= 0 ? '#059669' : '#dc2626' }}>
+                                    {act.margin >= 0 ? `+$${act.margin.toFixed(4)}` : `-$${Math.abs(act.margin).toFixed(4)}`}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
                               <th style={{ padding: '10px 14px' }}>Time</th>
@@ -2764,6 +3079,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                             )}
                           </tbody>
                         </table>
+                        </div>
+                        )}
                       </div>
                     </div>
 
@@ -2779,12 +3096,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                   Manual Reply List (Do Not Auto-Reply)
                 </h3>
 
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
                   <input
                     id="newBlockInput"
                     type="text"
                     placeholder="Enter phone number (+1...)"
-                    style={{ ...customInputStyle, maxWidth: '260px' }}
+                    style={{ ...customInputStyle, maxWidth: isMobile ? '100%' : '260px' }}
                   />
                   <button
                     onClick={() => {
@@ -2794,7 +3111,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         el.value = '';
                       }
                     }}
-                    style={solidPrimaryBtnStyle}
+                    style={{ ...solidPrimaryBtnStyle, ...tapBtn, width: isMobile ? '100%' : undefined }}
                   >
                     + Add Number
                   </button>
@@ -2832,8 +3149,8 @@ export default function MasterControlPanel({ onBackToHome }) {
 
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
-            Select a store account from the left sidebar to manage controls, API keys, and live activity.
+          <div style={{ textAlign: 'center', padding: isMobile ? '40px 12px' : '60px 0', color: '#94a3b8' }}>
+            {isMobile ? 'Tap the menu to select a store account.' : 'Select a store account from the left sidebar to manage controls, API keys, and live activity.'}
           </div>
         )}
 
@@ -2848,17 +3165,19 @@ export default function MasterControlPanel({ onBackToHome }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px',
+          zIndex: 1300,
+          padding: isMobile ? '12px' : '16px',
           backdropFilter: 'blur(4px)'
         }}>
           <div style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '20px',
-            padding: '28px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '20px 16px' : '28px',
             width: '100%',
             maxWidth: '440px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
             boxSizing: 'border-box'
           }}>
@@ -2913,7 +3232,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={formLabelStyle}>Initial Balance ($)</label>
                   <input
@@ -2942,7 +3261,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', flexDirection: isMobile ? 'column-reverse' : 'row', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -2954,7 +3273,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                     padding: '8px 16px',
                     fontSize: '13px',
                     fontWeight: '700',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: isMobile ? '100%' : undefined,
+                    ...tapBtn
                   }}
                 >
                   Cancel
@@ -2962,7 +3283,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  style={solidPrimaryBtnStyle}
+                  style={{ ...solidPrimaryBtnStyle, width: isMobile ? '100%' : undefined, ...tapBtn }}
                 >
                   {loading ? 'Creating...' : '+ Create Account'}
                 </button>
@@ -2984,16 +3305,19 @@ export default function MasterControlPanel({ onBackToHome }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
+          zIndex: 1300,
+          padding: isMobile ? '12px' : '20px'
         }}>
           <div style={{
             background: '#ffffff',
             borderRadius: '16px',
-            padding: '24px',
+            padding: isMobile ? '18px 16px' : '24px',
             width: '100%',
             maxWidth: '440px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
@@ -3074,7 +3398,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', flexDirection: isMobile ? 'column-reverse' : 'row', gap: '8px', marginTop: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setShowCredModal(false)}
@@ -3086,7 +3410,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                     fontSize: '12px',
                     fontWeight: '600',
                     color: '#475569',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: isMobile ? '100%' : undefined,
+                    ...tapBtn
                   }}
                 >
                   Cancel
@@ -3094,7 +3420,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <button
                   type="submit"
                   disabled={credLoading}
-                  style={{ ...solidPrimaryBtnStyle, padding: '8px 16px' }}
+                  style={{ ...solidPrimaryBtnStyle, padding: '8px 16px', width: isMobile ? '100%' : undefined, ...tapBtn }}
                 >
                   {credLoading ? 'Saving...' : 'Save & Sync Credentials'}
                 </button>
@@ -3116,18 +3442,19 @@ export default function MasterControlPanel({ onBackToHome }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
+          zIndex: 1300,
+          padding: isMobile ? '12px' : '20px'
         }}>
           <div style={{
             background: '#ffffff',
             borderRadius: '16px',
-            padding: '24px',
+            padding: isMobile ? '18px 16px' : '24px',
             width: '100%',
             maxWidth: '620px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
@@ -3159,17 +3486,18 @@ export default function MasterControlPanel({ onBackToHome }) {
                       padding: '12px 14px',
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
+                      alignItems: isMobile ? 'stretch' : 'center',
+                      flexDirection: isMobile ? 'column' : 'row',
                       flexWrap: 'wrap',
                       gap: '10px'
                     }}>
-                      <div style={{ minWidth: '180px' }}>
+                      <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{m.name}</div>
-                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>{m.model}</div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b', wordBreak: 'break-all' }}>{m.model}</div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                        <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
                             Input ($/1M)
                           </label>
@@ -3184,12 +3512,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 [mKey]: { ...prev[mKey], inPrice: val }
                               }));
                             }}
-                            style={{ ...customInputStyle, width: '90px', padding: '6px 8px', fontSize: '12px' }}
+                            style={{ ...customInputStyle, width: isMobile ? '100%' : '90px', padding: '6px 8px', fontSize: '12px' }}
                             required
                           />
                         </div>
 
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
                             Output ($/1M)
                           </label>
@@ -3204,7 +3532,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 [mKey]: { ...prev[mKey], outPrice: val }
                               }));
                             }}
-                            style={{ ...customInputStyle, width: '90px', padding: '6px 8px', fontSize: '12px' }}
+                            style={{ ...customInputStyle, width: isMobile ? '100%' : '90px', padding: '6px 8px', fontSize: '12px' }}
                             required
                           />
                         </div>
@@ -3214,7 +3542,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 })}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', marginTop: '14px', flexWrap: 'wrap', gap: '8px', flexDirection: isMobile ? 'column' : 'row' }}>
                 <button
                   type="button"
                   onClick={handleResetDefaultModelRates}
@@ -3226,13 +3554,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                     fontSize: '12px',
                     fontWeight: '700',
                     color: '#64748b',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: isMobile ? '100%' : undefined,
+                    ...tapBtn
                   }}
                 >
                   ↺ Reset 2026 Defaults
                 </button>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
                   <button
                     type="button"
                     onClick={() => setShowModelPricingModal(false)}
@@ -3244,14 +3574,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                       fontSize: '12px',
                       fontWeight: '600',
                       color: '#475569',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flex: isMobile ? 1 : undefined,
+                      ...tapBtn
                     }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    style={{ ...solidPrimaryBtnStyle, padding: '8px 18px' }}
+                    style={{ ...solidPrimaryBtnStyle, padding: '8px 18px', flex: isMobile ? 1 : undefined, ...tapBtn }}
                   >
                     Save Custom Pricing Rates
                   </button>
@@ -3304,7 +3636,10 @@ const cardSectionStyle = {
   borderRadius: '14px',
   padding: '20px',
   boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  maxWidth: '100%',
+  overflow: 'hidden',
+  wordBreak: 'break-word'
 };
 
 const kpiCardStyle = {
@@ -3327,7 +3662,8 @@ const customInputStyle = {
   fontSize: '13px',
   color: '#0f172a',
   outline: 'none',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  maxWidth: '100%'
 };
 
 const formLabelStyle = {

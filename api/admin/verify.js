@@ -1,4 +1,5 @@
 import { parseBody } from '../_db.js';
+import { createAdminToken } from '../_adminAuth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -29,16 +30,16 @@ export default async function handler(req, res) {
     }
 
     if (!password || password !== masterAdminPassword) {
-      return res.status(401).json({ error: 'Invalid Master Admin Password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const sessionToken = `admin_auth_${Date.now()}_${Math.random().toString(36).substring(2)}`;
     return res.status(200).json({
       success: true,
-      token: sessionToken,
+      token: createAdminToken(),
       message: 'Master Admin Access Granted'
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    console.error('Admin verify error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
