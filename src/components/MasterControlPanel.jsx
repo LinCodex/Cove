@@ -15,20 +15,11 @@ import {
   ArrowLeft, 
   Check, 
   AlertCircle,
-  Radio,
-  Zap,
-  Sparkles,
-  Phone,
-  MapPin,
-  RefreshCw,
-  SlidersHorizontal,
-  ChevronRight,
-  User,
-  Activity
+  Hash
 } from 'lucide-react';
 
 export default function MasterControlPanel({ onBackToHome }) {
-  // Authentication State (Master Admin Security)
+  // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('cove_master_admin_auth') === 'true';
   });
@@ -53,11 +44,10 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [newFixedFee, setNewFixedFee] = useState('0.0050');
   const [createError, setCreateError] = useState('');
 
-  // Stores State & Polling
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
 
-  // Draft States for editing (prevents background polling overwrites)
+  // Draft States for editing
   const [storeInfoDraft, setStoreInfoDraft] = useState({ storeName: '', phone: '', address: '' });
   const [profileDraft, setProfileDraft] = useState({ businessName: '', businessInfo: '', replyTone: '', aiRules: '' });
   const [spamDraft, setSpamDraft] = useState({});
@@ -104,39 +94,37 @@ export default function MasterControlPanel({ onBackToHome }) {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError('');
+
+    const envPass = import.meta.env.VITE_MASTER_ADMIN_PASSWORD || 'Aa7185095888!';
+
     try {
       const res = await fetch('/api/admin/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: authPassword })
+        body: JSON.stringify({ password: authPassword.trim() })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsAuthenticated(true);
+
+      if (res.ok) {
         sessionStorage.setItem('cove_master_admin_auth', 'true');
-        fetchUsers();
-      } else {
-        const expectedMasterPass = import.meta.env.VITE_MASTER_ADMIN_PASSWORD || 'Aa7185095888!';
-        if (authPassword === expectedMasterPass) {
-          setIsAuthenticated(true);
-          sessionStorage.setItem('cove_master_admin_auth', 'true');
-          fetchUsers();
-        } else {
-          setAuthError(data.error || 'Invalid Admin Password');
-        }
-      }
-    } catch {
-      const expectedMasterPass = import.meta.env.VITE_MASTER_ADMIN_PASSWORD || 'Aa7185095888!';
-      if (authPassword === expectedMasterPass) {
         setIsAuthenticated(true);
-        sessionStorage.setItem('cove_master_admin_auth', 'true');
+        setAuthPassword('');
+        setAuthLoading(false);
         fetchUsers();
-      } else {
-        setAuthError('Connection error or invalid password');
+        return;
       }
-    } finally {
-      setAuthLoading(false);
+    } catch (err) {
+      console.warn('API verify fallback to env:', err);
     }
+
+    if (envPass && authPassword.trim() === envPass.trim()) {
+      sessionStorage.setItem('cove_master_admin_auth', 'true');
+      setIsAuthenticated(true);
+      setAuthPassword('');
+      fetchUsers();
+    } else {
+      setAuthError('Incorrect Master Admin Password. Access Denied.');
+    }
+    setAuthLoading(false);
   };
 
   const handleAdminLogout = () => {
@@ -144,7 +132,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     setIsAuthenticated(false);
   };
 
-  // Fetch real users from backend API (Supabase)
+  // Fetch real users from backend API
   const fetchUsers = async () => {
     try {
       const res = await fetch(`/api/admin/users?_t=${Date.now()}`, {
@@ -158,7 +146,9 @@ export default function MasterControlPanel({ onBackToHome }) {
             const serverMap = new Map(data.users.map(u => [u.id, u]));
             const merged = [...data.users];
             prev.forEach(p => {
-              if (!serverMap.has(p.id)) merged.push(p);
+              if (!serverMap.has(p.id)) {
+                merged.push(p);
+              }
             });
             return merged;
           });
@@ -175,6 +165,7 @@ export default function MasterControlPanel({ onBackToHome }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchUsers();
+      // Real-time polling every 3 seconds
       const interval = setInterval(fetchUsers, 3000);
       return () => clearInterval(interval);
     }
@@ -186,8 +177,6 @@ export default function MasterControlPanel({ onBackToHome }) {
     setSaveToast(msg);
     setTimeout(() => setSaveToast(''), 3000);
   };
-
-  // ─── API Persistence Actions ───
 
   const syncUserToServer = async (updatedUserData) => {
     try {
@@ -292,8 +281,12 @@ export default function MasterControlPanel({ onBackToHome }) {
         blacklist: []
       };
 
-      setUsers(prev => [createdUser, ...prev.filter(u => u.id !== createdUser.id)]);
+      setUsers(prev => {
+        const without = prev.filter(u => u.id !== createdUser.id);
+        return [createdUser, ...without];
+      });
       setSelectedUserId(createdUser.id);
+
       triggerToast(`Store account "${payload.id}" created successfully!`);
       setShowCreateModal(false);
       setNewUserId('');
@@ -318,7 +311,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Balance updated: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)} (Synced)`);
+    triggerToast(`Balance updated: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)} (Live Synced)`);
   };
 
   const handleSetZeroBalance = () => {
@@ -347,31 +340,22 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast('Pricing overrides pushed to client APK!');
   };
 
-  const handleSaveStoreInfo = () => {
-    if (!selectedUser) return;
-    const updated = {
-      ...selectedUser,
-      storeName: storeInfoDraft.storeName || selectedUser.storeName,
-      phone: storeInfoDraft.phone,
-      address: storeInfoDraft.address
-    };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
-    setEditFlags(prev => ({ ...prev, storeInfo: false }));
-    triggerToast('Store details saved and synced!');
-  };
-
   const handleSaveProfile = () => {
     if (!selectedUser) return;
-    const updated = { 
-      ...selectedUser, 
-      businessProfile: profileDraft,
-      storeName: profileDraft.businessName || selectedUser.storeName
-    };
+    const updated = { ...selectedUser, businessProfile: profileDraft };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
     setEditFlags(prev => ({ ...prev, profile: false }));
-    triggerToast('Store Profile saved & synced to APK!');
+    triggerToast('Store Profile saved and synced!');
+  };
+
+  const handleSaveStoreInfo = () => {
+    if (!selectedUser) return;
+    const updated = { ...selectedUser, ...storeInfoDraft };
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+    syncUserToServer(updated);
+    setEditFlags(prev => ({ ...prev, storeInfo: false }));
+    triggerToast(`Store info updated`);
   };
 
   const handleSaveSpamSchedule = () => {
@@ -380,7 +364,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
     setEditFlags(prev => ({ ...prev, spam: false }));
-    triggerToast('Spam & Schedule rules saved & synced!');
+    triggerToast('Spam & Schedule rules synced!');
   };
 
   const handleAddBlockedNumber = (number) => {
@@ -390,7 +374,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     const updated = { ...selectedUser, blacklist: [...(selectedUser.blacklist || []), clean] };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Added ${clean} to manual reply list`);
+    triggerToast(`Blocked number ${clean}`);
   };
 
   const handleRemoveBlockedNumber = (number) => {
@@ -398,7 +382,7 @@ export default function MasterControlPanel({ onBackToHome }) {
     const updated = { ...selectedUser, blacklist: (selectedUser.blacklist || []).filter(n => n !== number) };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Removed ${number} from manual list`);
+    triggerToast(`Unblocked number ${number}`);
   };
 
   const filteredUsers = users.filter(u => 
@@ -407,7 +391,62 @@ export default function MasterControlPanel({ onBackToHome }) {
     (u.phone || '').includes(searchQuery)
   );
 
-  // ─── AUTH SCREEN (Slack Clean Style) ───
+  const filteredActivities = ((selectedUser && selectedUser.activities) || []).filter(a => {
+    if (activityFilter === 'sent') return a.status?.startsWith('Sent');
+    if (activityFilter === 'blocked') return a.status?.includes('Blocked');
+    return true;
+  });
+
+  // Common Slack Styles
+  const primaryBtnStyle = {
+    background: '#007a5a',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '8px 16px',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'background 0.15s ease'
+  };
+
+  const secondaryBtnStyle = {
+    background: '#ffffff',
+    border: '1px solid #cbd5e1',
+    color: '#334155',
+    borderRadius: '8px',
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'background 0.15s ease'
+  };
+
+  const formInputStyle = {
+    width: '100%',
+    background: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '8px 12px',
+    color: '#1d1c1d',
+    fontSize: '13px',
+    outline: 'none',
+    boxSizing: 'border-box'
+  };
+
+  const panelCardStyle = {
+    background: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+  };
+
+  // ─── SECURITY GATE (LOGIN SCREEN) ───
   if (!isAuthenticated) {
     return (
       <div style={{
@@ -417,406 +456,217 @@ export default function MasterControlPanel({ onBackToHome }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
         <div style={{
-          width: '100%',
-          maxWidth: '400px',
           background: '#ffffff',
           border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '32px 28px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)'
+          borderRadius: '12px',
+          padding: 'clamp(24px, 5vw, 36px)',
+          width: '100%',
+          maxWidth: '400px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          boxSizing: 'border-box'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
               background: '#4a154b',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px auto',
-              boxShadow: '0 4px 12px rgba(74, 21, 75, 0.2)'
+              justifyContent: 'center'
             }}>
-              <Zap size={24} color="#ffffff" />
+              <Shield size={18} color="#fff" />
             </div>
-            <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#1d1c1d', margin: '0 0 6px 0' }}>
-              Cove Master Console
-            </h1>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-              Enter Master Administrator password to manage store accounts and live APK sync.
-            </p>
+            <div>
+              <h2 style={{ color: '#1d1c1d', fontSize: '18px', fontWeight: '700', margin: 0 }}>
+                Cove Master Control
+              </h2>
+              <span style={{ color: '#64748b', fontSize: '13px' }}>Administrative Access</span>
+            </div>
           </div>
 
-          <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
-                Master Admin Password
-              </label>
-              <input
-                type="password"
-                placeholder="Enter password..."
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  color: '#1d1c1d',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-                required
-              />
-            </div>
+          <p style={{ color: '#475569', fontSize: '13px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+            Sign in with the Master Admin password to manage store accounts and view live activity.
+          </p>
+
+          <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <input
+              type="password"
+              placeholder="Password"
+              value={authPassword}
+              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
+              style={formInputStyle}
+              required
+              autoFocus
+            />
 
             {authError && (
-              <div style={{
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: '#b91c1c',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
+              <div style={{ color: '#c5221f', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <AlertCircle size={14} />
                 <span>{authError}</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={authLoading}
-              style={{
-                background: '#007a5a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '11px',
-                fontWeight: '700',
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'background 0.15s ease'
-              }}
-            >
-              {authLoading ? 'Verifying...' : 'Sign In to Master Console'}
-              <ChevronRight size={16} />
+            <button type="submit" disabled={authLoading} style={primaryBtnStyle}>
+              {authLoading ? 'Signing in...' : 'Sign In'}
+            </button>
+
+            <button type="button" onClick={onBackToHome} style={{ ...secondaryBtnStyle, marginTop: '4px', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+              ← Back to Cove
             </button>
           </form>
-
-          <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={onBackToHome}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <ArrowLeft size={14} /> Back to Website
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
-  // ─── AUTHENTICATED SLACK CONSOLE ───
+  // ─── REFINED CLEAN DASHBOARD ───
   return (
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f8fafc',
       color: '#1d1c1d',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      boxSizing: 'border-box'
     }}>
-
-      {/* TOP SLACK-STYLE HEADER */}
-      <header style={{
+      
+      {/* Top Header Bar */}
+      <div style={{
         background: '#ffffff',
         borderBottom: '1px solid #e2e8f0',
         padding: '12px 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
+        flexWrap: 'wrap',
+        gap: '12px',
+        marginBottom: '24px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
             width: '32px',
             height: '32px',
-            borderRadius: '8px',
+            borderRadius: '6px',
             background: '#4a154b',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(74, 21, 75, 0.25)'
+            justifyContent: 'center'
           }}>
-            <Zap size={18} color="#ffffff" />
+            <Shield size={16} color="#ffffff" />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '15px', fontWeight: '800', color: '#1d1c1d', letterSpacing: '-0.02em' }}>COVE</span>
-              <span style={{
-                background: '#f1f5f9',
-                color: '#475569',
-                fontSize: '11px',
-                fontWeight: '700',
-                padding: '2px 8px',
-                borderRadius: '6px'
-              }}>
-                Master Console
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
+          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1d1c1d' }}>
+            Cove Admin
+          </h1>
+          <span style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             background: '#e6f4ea',
             color: '#137333',
-            fontSize: '12px',
-            fontWeight: '600',
             padding: '4px 10px',
-            borderRadius: '20px'
+            borderRadius: '16px',
+            fontSize: '12px',
+            fontWeight: '600'
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34a853' }}></span>
-            Supabase Live
-          </div>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34a853' }} />
+            System Live
+          </span>
+        </div>
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            style={{
-              background: '#007a5a',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '7px 14px',
-              fontWeight: '600',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Plus size={15} /> Add Store Account
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => setShowCreateModal(true)} style={primaryBtnStyle}>
+            <Plus size={14} style={{ marginRight: '6px' }} />
+            New Store
           </button>
-
-          <button
-            onClick={onBackToHome}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#475569',
-              borderRadius: '8px',
-              padding: '7px 12px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Exit Console
-          </button>
-
-          <button
-            onClick={handleAdminLogout}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#64748b',
-              fontSize: '13px',
-              cursor: 'pointer',
-              padding: '7px 8px'
-            }}
-          >
+          <button onClick={handleAdminLogout} style={{ ...secondaryBtnStyle, color: '#475569' }}>
+            <Lock size={14} style={{ marginRight: '6px' }} />
             Sign Out
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* SAVE CONFIRMATION TOAST */}
-      {saveToast && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          background: '#007a5a',
-          color: '#ffffff',
-          padding: '10px 18px',
-          borderRadius: '8px',
-          fontSize: '13px',
-          fontWeight: '600',
-          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          zIndex: 100
-        }}>
-          <Check size={16} />
-          <span>{saveToast}</span>
-        </div>
-      )}
-
-      {/* MAIN TWO-COLUMN CONTAINER */}
-      <div style={{
-        maxWidth: '1380px',
-        margin: '0 auto',
-        padding: '20px 16px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '20px',
-        boxSizing: 'border-box'
-      }}>
-
-        {/* ─── LEFT COLUMN: STORE ACCOUNTS LIST ─── */}
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '12px',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'fit-content',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: '#1d1c1d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Store Accounts ({users.length})
-            </span>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                background: '#f1f5f9',
-                border: 'none',
-                color: '#1264a3',
-                fontSize: '12px',
-                fontWeight: '700',
-                borderRadius: '6px',
-                padding: '4px 8px',
-                cursor: 'pointer'
-              }}
-            >
-              + New Store
-            </button>
+      <div style={{ padding: '0 24px 24px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px' }}>
+        
+        {/* Left Sidebar: Store Accounts List */}
+        <div style={{ ...panelCardStyle, padding: '0', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '15px', fontWeight: '700', color: '#1d1c1d' }}>Stores</span>
+              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px' }}>
+                {users.length} Total
+              </span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} color="#64748b" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+              <input
+                type="text"
+                placeholder="Search stores..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ ...formInputStyle, paddingLeft: '34px', background: '#f8fafc' }}
+              />
+            </div>
           </div>
 
-          {/* Search Box */}
-          <div style={{ position: 'relative', marginBottom: '12px' }}>
-            <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '10px' }} />
-            <input
-              type="text"
-              placeholder="Search stores..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '7px 10px 7px 32px',
-                fontSize: '13px',
-                color: '#1d1c1d',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Store List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '580px', overflowY: 'auto' }}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             {filteredUsers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: '13px' }}>
-                No stores found.
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                No store accounts found.
               </div>
             ) : (
-              filteredUsers.map(u => {
-                const isSelected = u.id === selectedUserId;
-                const isPaused = (u.balance || 0) <= 0;
-                return (
-                  <div
-                    key={u.id}
-                    onClick={() => setSelectedUserId(u.id)}
-                    style={{
-                      background: isSelected ? '#e8f5fa' : 'transparent',
-                      borderLeft: isSelected ? '3px solid #1264a3' : '3px solid transparent',
-                      padding: '10px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'background 0.1s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: isSelected ? '#1264a3' : '#1d1c1d' }}>
-                        {u.storeName || u.id}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {filteredUsers.map(user => {
+                  const isSelected = selectedUser && user.id === selectedUser.id;
+                  const isZero = (user.balance || 0) <= 0;
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => setSelectedUserId(user.id)}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        background: isSelected ? '#e8f5fa' : '#ffffff',
+                        borderLeft: isSelected ? '4px solid #1264a3' : '4px solid transparent',
+                        borderBottom: '1px solid #f1f5f9',
+                        transition: 'background 0.1s'
+                      }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#f1f5f9' }}
+                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#ffffff' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '600', fontSize: '14px', color: '#1d1c1d' }}>
+                          {user.storeName || user.id}
+                        </span>
+                        <span style={{ fontWeight: '600', fontSize: '13px', color: isZero ? '#c5221f' : '#137333' }}>
+                          ${(user.balance || 0).toFixed(2)}
+                        </span>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>
-                        ID: {u.id}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        color: isPaused ? '#c5221f' : '#007a5a'
-                      }}>
-                        ${(u.balance || 0).toFixed(2)}
-                      </div>
-                      <div style={{
-                        fontSize: '10px',
-                        fontWeight: '700',
-                        color: isPaused ? '#c5221f' : '#137333'
-                      }}>
-                        {isPaused ? 'PAUSED' : 'ACTIVE'}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                        <span><Hash size={10} style={{ display: 'inline', marginRight: '2px' }}/>{user.id}</span>
+                        <span style={{ color: isZero ? '#c5221f' : '#64748b' }}>
+                          {isZero ? 'Paused' : 'Active'}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
 
-        {/* ─── RIGHT COLUMN: STORE CONTROL & TABS ─── */}
+        {/* Right Area: Selected Account Detail */}
         {selectedUser ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* TOP STORE OVERVIEW CARD */}
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ flex: 1, minWidth: '240px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: 'calc(100vh - 120px)', overflowY: 'auto', paddingRight: '4px' }}>
+            
+            {/* Store Overview Card */}
+            <div style={panelCardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <input
                       type="text"
                       value={storeInfoDraft.storeName || ''}
@@ -824,35 +674,37 @@ export default function MasterControlPanel({ onBackToHome }) {
                         setEditFlags(prev => ({ ...prev, storeInfo: true }));
                         setStoreInfoDraft(prev => ({ ...prev, storeName: e.target.value }));
                       }}
+                      onBlur={(e) => { e.target.style.background = 'transparent'; e.target.style.border = '1px solid transparent'; }}
+                      onFocus={(e) => { e.target.style.background = '#ffffff'; e.target.style.border = '1px solid #cbd5e1'; }}
                       style={{
-                        fontSize: '18px',
+                        fontSize: '22px',
                         fontWeight: '800',
                         color: '#1d1c1d',
-                        border: '1px solid #e2e8f0',
+                        background: 'transparent',
+                        border: '1px solid transparent',
                         borderRadius: '6px',
                         padding: '4px 8px',
                         outline: 'none',
-                        background: '#f8fafc',
                         width: 'auto',
-                        minWidth: '200px'
+                        minWidth: '200px',
+                        marginLeft: '-8px'
                       }}
                     />
                     <span style={{
                       fontSize: '11px',
                       fontWeight: '700',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '16px',
                       background: (selectedUser.balance || 0) <= 0 ? '#fce8e6' : '#e6f4ea',
-                      color: (selectedUser.balance || 0) <= 0 ? '#c5221f' : '#137333'
+                      color: (selectedUser.balance || 0) <= 0 ? '#c5221f' : '#137333',
                     }}>
                       {(selectedUser.balance || 0) <= 0 ? 'PAUSED' : 'ACTIVE'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Phone size={12} />
-                      <span>Phone:</span>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#475569', flexWrap: 'wrap', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '600' }}>Phone:</span>
                       <input
                         type="text"
                         value={storeInfoDraft.phone || ''}
@@ -860,21 +712,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                           setEditFlags(prev => ({ ...prev, storeInfo: true }));
                           setStoreInfoDraft(prev => ({ ...prev, phone: e.target.value }));
                         }}
-                        placeholder="Not set"
-                        style={{
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '4px',
-                          padding: '2px 6px',
-                          fontSize: '12px',
-                          color: '#1d1c1d',
-                          width: '120px'
-                        }}
+                        placeholder="Add phone..."
+                        style={{ ...formInputStyle, padding: '4px 8px', width: '140px' }}
                       />
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={12} />
-                      <span>Address:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '600' }}>Address:</span>
                       <input
                         type="text"
                         value={storeInfoDraft.address || ''}
@@ -882,121 +725,69 @@ export default function MasterControlPanel({ onBackToHome }) {
                           setEditFlags(prev => ({ ...prev, storeInfo: true }));
                           setStoreInfoDraft(prev => ({ ...prev, address: e.target.value }));
                         }}
-                        placeholder="Not set"
-                        style={{
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '4px',
-                          padding: '2px 6px',
-                          fontSize: '12px',
-                          color: '#1d1c1d',
-                          width: '150px'
-                        }}
+                        placeholder="Add address..."
+                        style={{ ...formInputStyle, padding: '4px 8px', width: '220px' }}
                       />
                     </div>
+                  </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={12} />
-                      <span>Pass:</span>
-                      <span style={{ fontFamily: 'monospace', color: '#1d1c1d', fontWeight: '600' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px' }}>
+                    <span style={{ color: '#64748b' }}>ID: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#1d1c1d' }}>{selectedUser.id}</code></span>
+                    <span style={{ color: '#64748b' }}>
+                      Password: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#1d1c1d' }}>
                         {showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}
-                      </span>
-                      <button
+                      </code>
+                      <button 
                         onClick={() => setShowPasswordMap(prev => ({ ...prev, [selectedUser.id]: !prev[selectedUser.id] }))}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px' }}
+                        style={{ background: 'none', border: 'none', color: '#1264a3', cursor: 'pointer', marginLeft: '6px' }}
                       >
-                        {showPasswordMap[selectedUser.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                        {showPasswordMap[selectedUser.id] ? 'Hide' : 'Show'}
                       </button>
-                    </div>
-
+                    </span>
                     {editFlags.storeInfo && (
-                      <button
-                        onClick={handleSaveStoreInfo}
-                        style={{
-                          background: '#007a5a',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '4px 10px',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Save Store Info
+                      <button onClick={handleSaveStoreInfo} style={{ ...primaryBtnStyle, padding: '4px 12px', fontSize: '11px', marginLeft: 'auto' }}>
+                        Save Info
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Right: Balance & Actions */}
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                  textAlign: 'right',
-                  minWidth: '180px'
-                }}>
-                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', marginBottom: '2px' }}>Current Balance</div>
+                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', minWidth: '220px', textAlign: 'right' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>CURRENT BALANCE</div>
                   <div style={{
-                    fontSize: '22px',
+                    fontSize: '28px',
                     fontWeight: '800',
-                    color: (selectedUser.balance || 0) <= 0 ? '#c5221f' : '#007a5a',
-                    marginBottom: '8px'
+                    color: (selectedUser.balance || 0) <= 0 ? '#c5221f' : '#137333',
+                    marginBottom: '12px'
                   }}>
-                    ${(selectedUser.balance || 0).toFixed(2)}
+                    ${(selectedUser.balance || 0).toFixed(3)}
                   </div>
-                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                    <button onClick={() => handleUpdateBalance(5.00)} style={slackSmallBtnStyle}>+$5</button>
-                    <button onClick={() => handleUpdateBalance(20.00)} style={slackSmallBtnStyle}>+$20</button>
-                    <button onClick={() => handleUpdateBalance(-1.00)} style={slackSmallBtnStyle}>-$1</button>
-                    <button onClick={handleSetZeroBalance} style={{ ...slackSmallBtnStyle, color: '#c5221f' }}>Set $0</button>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    <button onClick={() => handleUpdateBalance(10)} style={{ ...secondaryBtnStyle, padding: '4px 8px', fontSize: '11px' }}>+$10</button>
+                    <button onClick={() => handleUpdateBalance(25)} style={{ ...secondaryBtnStyle, padding: '4px 8px', fontSize: '11px' }}>+$25</button>
+                    <button onClick={() => handleUpdateBalance(50)} style={{ ...secondaryBtnStyle, padding: '4px 8px', fontSize: '11px' }}>+$50</button>
+                    <button onClick={handleSetZeroBalance} style={{ ...secondaryBtnStyle, padding: '4px 8px', fontSize: '11px', color: '#c5221f', borderColor: '#fce8e6', background: '#fce8e6' }}>Set $0</button>
                   </div>
                 </div>
-              </div>
-
-              {/* Bottom Card Action Bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  Total SMS Processed: <strong style={{ color: '#1d1c1d' }}>{selectedUser.totalRequests || selectedUser.activities?.length || 0}</strong>
-                </div>
-                <button
-                  onClick={() => handleDeleteUser(selectedUser.id)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#e01e5a',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Trash2 size={13} /> Delete Store Account
-                </button>
               </div>
             </div>
 
-            {/* ─── SLACK-STYLE TABS NAVIGATION ─── */}
+            {/* Tabs Navigation */}
             <div style={{
               display: 'flex',
+              gap: '24px',
               borderBottom: '1px solid #e2e8f0',
-              background: '#ffffff',
-              borderRadius: '10px 10px 0 0',
-              padding: '0 12px',
-              overflowX: 'auto'
+              paddingBottom: '0',
+              marginBottom: '4px'
             }}>
               {[
-                { id: 'activity', label: 'Live SMS Activity', icon: Activity },
-                { id: 'pricing', label: 'Pricing & Rates', icon: DollarSign },
-                { id: 'profile', label: 'Store Profile & AI', icon: Sparkles },
-                { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
-                { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
+                { id: 'activity', label: 'Live Activity' },
+                { id: 'pricing', label: 'Pricing Setup' },
+                { id: 'profile', label: 'Store Profile' },
+                { id: 'spam_schedule', label: 'Spam & Schedule' },
+                { id: 'blacklist', label: 'Manual Reply' }
               ].map(tab => {
                 const isActive = activeTab === tab.id;
-                const IconComp = tab.icon;
                 return (
                   <button
                     key={tab.id}
@@ -1004,827 +795,353 @@ export default function MasterControlPanel({ onBackToHome }) {
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      borderBottom: isActive ? '2px solid #1264a3' : '2px solid transparent',
                       color: isActive ? '#1264a3' : '#64748b',
-                      fontWeight: isActive ? '700' : '600',
-                      fontSize: '13px',
-                      padding: '12px 14px',
+                      padding: '8px 4px 12px 4px',
+                      fontSize: '14px',
+                      fontWeight: isActive ? '700' : '500',
+                      borderBottom: isActive ? '3px solid #1264a3' : '3px solid transparent',
                       cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      whiteSpace: 'nowrap'
+                      marginBottom: '-1px',
+                      transition: 'all 0.1s'
                     }}
                   >
-                    <IconComp size={14} />
                     {tab.label}
                   </button>
                 );
               })}
             </div>
 
-            {/* ─── TAB 1: LIVE SMS ACTIVITY ─── */}
+            {/* TAB 1: LIVE ACTIVITY */}
             {activeTab === 'activity' && (
-              <div style={slackCardStyle}>
-                {/* Summary Stats Row */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                  gap: '12px',
-                  marginBottom: '16px'
-                }}>
-                  <div style={slackMetricCardStyle}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Total Messages</div>
-                    <div style={{ fontSize: '18px', fontWeight: '800', color: '#1d1c1d' }}>
-                      {selectedUser.activities?.length || 0}
+              <div style={panelCardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: '#1d1c1d' }}>SMS Conversation Ledger</h3>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', color: '#475569', border: '1px solid #e2e8f0' }}>
+                      Messages: <strong>{selectedUser.activities?.length || 0}</strong>
                     </div>
-                  </div>
-                  <div style={slackMetricCardStyle}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Total Revenue</div>
-                    <div style={{ fontSize: '18px', fontWeight: '800', color: '#007a5a' }}>
-                      ${selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0).toFixed(4) || '0.0000'}
-                    </div>
-                  </div>
-                  <div style={slackMetricCardStyle}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Tokens Used</div>
-                    <div style={{ fontSize: '18px', fontWeight: '800', color: '#1264a3' }}>
-                      {selectedUser.activities?.reduce((sum, a) => sum + (a.tokensIn || 0) + (a.tokensOut || 0), 0) || 0}
+                    <div style={{ background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', color: '#475569', border: '1px solid #e2e8f0' }}>
+                      Revenue: <strong style={{ color: '#137333' }}>${selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0).toFixed(4) || '0.0000'}</strong>
                     </div>
                   </div>
                 </div>
 
-                {/* Filter Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#1d1c1d' }}>
-                    Live Activity Ledger
-                  </span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {['all', 'sent', 'blocked'].map(f => (
-                      <button
-                        key={f}
-                        onClick={() => setActivityFilter(f)}
-                        style={{
-                          background: activityFilter === f ? '#1264a3' : '#f1f5f9',
-                          color: activityFilter === f ? '#ffffff' : '#64748b',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '4px 10px',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          textTransform: 'capitalize'
-                        }}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                  {['all', 'sent', 'blocked'].map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setActivityFilter(f)}
+                      style={{
+                        background: activityFilter === f ? '#e8f5fa' : '#ffffff',
+                        border: activityFilter === f ? '1px solid #1264a3' : '1px solid #cbd5e1',
+                        color: activityFilter === f ? '#1264a3' : '#475569',
+                        borderRadius: '16px',
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        textTransform: 'capitalize'
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Activity Feed */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '480px', overflowY: 'auto' }}>
-                  {(!selectedUser.activities || selectedUser.activities.length === 0) ? (
-                    <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: '13px' }}>
-                      No SMS activity recorded yet. Inbound SMS will stream here automatically.
-                    </div>
-                  ) : (
-                    selectedUser.activities
-                      .filter(a => {
-                        if (activityFilter === 'sent') return a.status?.toLowerCase().includes('sent');
-                        if (activityFilter === 'blocked') return a.status?.toLowerCase().includes('block') || a.status?.toLowerCase().includes('pause');
-                        return true;
-                      })
-                      .map((act, idx) => (
-                        <div
-                          key={act.id || idx}
-                          style={{
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            padding: '12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-                            <span style={{ fontWeight: '700', color: '#1d1c1d' }}>{act.sender}</span>
-                            <span style={{ color: '#94a3b8' }}>{act.time}</span>
-                          </div>
-
-                          <div style={{
-                            background: '#ffffff',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '6px',
-                            padding: '6px 10px',
-                            fontSize: '12px',
-                            color: '#334155'
-                          }}>
-                            <strong>In:</strong> {act.incoming}
-                          </div>
-
-                          {act.reply && (
-                            <div style={{
-                              background: '#e8f5fa',
-                              border: '1px solid #bae6fd',
-                              borderRadius: '6px',
-                              padding: '6px 10px',
-                              fontSize: '12px',
-                              color: '#0369a1'
+                {filteredActivities.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '48px 24px', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <MessageSquare size={24} color="#94a3b8" style={{ margin: '0 auto 12px auto', display: 'block' }} />
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '500' }}>No SMS activity logged yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {filteredActivities.map((act, i) => (
+                      <div key={act.id || i} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#ffffff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d' }}>{act.sender}</span>
+                            <span style={{ fontSize: '12px', color: '#64748b' }}>{act.time}</span>
+                            <span style={{
+                              fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '4px',
+                              background: act.status?.startsWith('Sent') ? '#e6f4ea' : '#fce8e6',
+                              color: act.status?.startsWith('Sent') ? '#137333' : '#c5221f'
                             }}>
-                              <strong>Cove AI:</strong> {act.reply}
-                            </div>
-                          )}
+                              {act.status}
+                            </span>
+                          </div>
+                          <span style={{ color: '#1264a3', fontWeight: '700', fontSize: '13px' }}>
+                            ${(act.cost || 0.005).toFixed(4)}
+                          </span>
+                        </div>
 
-                          <div style={{ display: 'flex', gap: '12px', fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-                            <span>In: {act.tokensIn || 0} tokens</span>
-                            <span>Out: {act.tokensOut || 0} tokens</span>
-                            <span>Cost: ${(act.cost || 0.005).toFixed(4)}</span>
-                            <span style={{ marginLeft: 'auto', fontWeight: '600', color: '#007a5a' }}>{act.status}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', lineHeight: '1.5' }}>
+                          <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <strong style={{ color: '#475569', marginRight: '8px' }}>Customer:</strong>
+                            <span style={{ color: '#1d1c1d' }}>{act.incoming}</span>
+                          </div>
+                          <div style={{ background: '#e8f5fa', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                            <strong style={{ color: '#1264a3', marginRight: '8px' }}>Cove AI:</strong>
+                            <span style={{ color: '#1d1c1d' }}>{act.reply}</span>
                           </div>
                         </div>
-                      ))
-                  )}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ─── TAB 2: PRICING & TOKEN RATES ─── */}
+            {/* TAB 2: PRICING */}
             {activeTab === 'pricing' && (
-              <div style={slackCardStyle}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 12px 0', color: '#1d1c1d' }}>
-                  Billing & Token Pricing Models
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0' }}>
-                  Configure how deductions are calculated per SMS auto-reply for this store.
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                  {/* Flat Fee */}
-                  <div
+              <div style={panelCardStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 16px 0', color: '#1d1c1d' }}>Pricing Models</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                  
+                  {/* Fixed Fee */}
+                  <div 
                     onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
                     style={{
                       background: selectedUser.pricingMode === 'fixed_fee' ? '#e8f5fa' : '#ffffff',
                       border: selectedUser.pricingMode === 'fixed_fee' ? '2px solid #1264a3' : '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '14px',
-                      cursor: 'pointer'
+                      borderRadius: '12px', padding: '20px', cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#1d1c1d', marginBottom: '4px' }}>
-                      Fixed Flat Fee
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Deduct an exact flat rate per message.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>$</span>
+                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d', marginBottom: '8px' }}>Fixed Flat Fee</div>
+                    <div style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>Deduct exact rate per SMS.</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#475569', fontWeight: '600' }}>$</span>
                       <input
-                        type="number"
-                        step="0.001"
+                        type="number" step="0.001"
                         value={selectedUser.fixedFeePerMessage || 0.005}
                         onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                        style={slackInputStyle}
+                        style={{ ...formInputStyle, width: '90px' }}
                       />
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>/ msg</span>
                     </div>
                   </div>
 
-                  {/* Custom Token Rates */}
-                  <div
+                  {/* Token Custom */}
+                  <div 
                     onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
                     style={{
                       background: selectedUser.pricingMode === 'token_custom' ? '#e8f5fa' : '#ffffff',
                       border: selectedUser.pricingMode === 'token_custom' ? '2px solid #1264a3' : '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '14px',
-                      cursor: 'pointer'
+                      borderRadius: '12px', padding: '20px', cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#1d1c1d', marginBottom: '4px' }}>
-                      Custom Token Rates
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Bill actual prompt and completion tokens.
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-                        <span style={{ color: '#64748b' }}>In $/1M:</span>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={selectedUser.customInputPrice1M || 0.25}
-                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
-                          style={{ ...slackInputStyle, width: '70px' }}
-                        />
+                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d', marginBottom: '8px' }}>Custom Token Rates</div>
+                    <div style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>Bill tokens with margin.</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>In $/1M:</span>
+                        <input type="number" step="0.05" value={selectedUser.customInputPrice1M || 0.25} onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)} style={{ ...formInputStyle, width: '80px' }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-                        <span style={{ color: '#64748b' }}>Out $/1M:</span>
-                        <input
-                          type="number"
-                          step="0.10"
-                          value={selectedUser.customOutputPrice1M || 1.50}
-                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
-                          style={{ ...slackInputStyle, width: '70px' }}
-                        />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Out $/1M:</span>
+                        <input type="number" step="0.10" value={selectedUser.customOutputPrice1M || 1.50} onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)} style={{ ...formInputStyle, width: '80px' }} />
                       </div>
                     </div>
                   </div>
 
                   {/* Direct Pass-Through */}
-                  <div
+                  <div 
                     onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
                     style={{
                       background: selectedUser.pricingMode === 'default_ai' ? '#e8f5fa' : '#ffffff',
                       border: selectedUser.pricingMode === 'default_ai' ? '2px solid #1264a3' : '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '14px',
-                      cursor: 'pointer'
+                      borderRadius: '12px', padding: '20px', cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#1d1c1d', marginBottom: '4px' }}>
-                      Direct AI Pass-Through
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Standard provider supplier rates.
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#007a5a', fontWeight: '600' }}>
-                      Gemini 3.1 Flash Lite ($0.25 / $1.50)
+                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d', marginBottom: '8px' }}>Direct AI Pass-Through</div>
+                    <div style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>Raw model supplier rate.</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', background: '#f1f5f9', padding: '8px', borderRadius: '6px' }}>
+                      Gemini Flash ($0.25 / $1.50)
                     </div>
                   </div>
+
                 </div>
               </div>
             )}
 
-            {/* ─── TAB 3: STORE PROFILE & AI SETUP ─── */}
+            {/* TAB 3: PROFILE */}
             {activeTab === 'profile' && (
-              <div style={slackCardStyle}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 4px 0', color: '#1d1c1d' }}>
-                  Store Profile & Knowledge Base
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0' }}>
-                  Updating these details immediately flushes the on-device AI briefing cache and pushes the latest facts.
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={panelCardStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 20px 0', color: '#1d1c1d' }}>Store Profile & Knowledge</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={slackLabelStyle}>Business / Store Name</label>
-                    <input
-                      type="text"
-                      value={profileDraft.businessName || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, businessName: e.target.value }));
-                      }}
-                      style={slackInputStyle}
-                    />
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1d1c1d', marginBottom: '6px' }}>Business Name</label>
+                    <input type="text" value={profileDraft.businessName || ''} onChange={(e) => { setEditFlags(prev => ({ ...prev, profile: true })); setProfileDraft(prev => ({ ...prev, businessName: e.target.value })); }} style={formInputStyle} />
                   </div>
-
                   <div>
-                    <label style={slackLabelStyle}>Business Details, Services & FAQ</label>
-                    <textarea
-                      rows={4}
-                      value={profileDraft.businessInfo || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value }));
-                      }}
-                      placeholder="e.g. Open Mon-Sat 9AM-7PM. Specializing in..."
-                      style={{ ...slackInputStyle, resize: 'vertical' }}
-                    />
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1d1c1d', marginBottom: '6px' }}>Business Details & FAQ</label>
+                    <textarea rows={4} value={profileDraft.businessInfo || ''} onChange={(e) => { setEditFlags(prev => ({ ...prev, profile: true })); setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value })); }} style={{ ...formInputStyle, resize: 'vertical' }} />
                   </div>
-
                   <div>
-                    <label style={slackLabelStyle}>AI Reply Tone</label>
-                    <input
-                      type="text"
-                      value={profileDraft.replyTone || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, replyTone: e.target.value }));
-                      }}
-                      style={slackInputStyle}
-                    />
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1d1c1d', marginBottom: '6px' }}>Reply Tone</label>
+                    <input type="text" value={profileDraft.replyTone || ''} onChange={(e) => { setEditFlags(prev => ({ ...prev, profile: true })); setProfileDraft(prev => ({ ...prev, replyTone: e.target.value })); }} style={formInputStyle} />
                   </div>
-
                   <div>
-                    <label style={slackLabelStyle}>Strict Rules & Limitations</label>
-                    <textarea
-                      rows={2}
-                      value={profileDraft.aiRules || ''}
-                      onChange={(e) => {
-                        setEditFlags(prev => ({ ...prev, profile: true }));
-                        setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
-                      }}
-                      placeholder="e.g. Do not promise discounts without manager approval."
-                      style={{ ...slackInputStyle, resize: 'vertical' }}
-                    />
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1d1c1d', marginBottom: '6px' }}>Strict Rules</label>
+                    <textarea rows={3} value={profileDraft.aiRules || ''} onChange={(e) => { setEditFlags(prev => ({ ...prev, profile: true })); setProfileDraft(prev => ({ ...prev, aiRules: e.target.value })); }} style={{ ...formInputStyle, resize: 'vertical' }} />
                   </div>
-
+                  
                   {editFlags.profile && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                      <button onClick={handleSaveProfile} style={slackPrimaryBtnStyle}>
-                        Save Profile & Sync to APK
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                      <button onClick={handleSaveProfile} style={primaryBtnStyle}>Save Profile Sync</button>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* ─── TAB 4: SPAM & HOURS SCHEDULE ─── */}
+            {/* TAB 4: SPAM & SCHEDULE */}
             {activeTab === 'spam_schedule' && (
-              <div style={slackCardStyle}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 4px 0', color: '#1d1c1d' }}>
-                  Spam Protection & Hours Schedule
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0' }}>
-                  Configure rate limiting, message window caps, and operational hours.
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-                  {/* Spam Controls */}
-                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#1d1c1d' }}>Spam Protection</span>
-                      <div
-                        onClick={() => {
-                          setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, spamEnabled: !prev.spamEnabled }));
-                        }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
-                          background: spamDraft.spamEnabled !== false ? '#e6f4ea' : '#fce8e6',
-                          color: spamDraft.spamEnabled !== false ? '#137333' : '#c5221f'
-                        }}
-                      >
-                        {spamDraft.spamEnabled !== false ? 'ENABLED' : 'DISABLED'}
-                      </div>
+              <div style={panelCardStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 20px 0', color: '#1d1c1d' }}>Spam & Schedule Rules</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d' }}>Spam Protection</div>
+                      <button onClick={() => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, spamEnabled: !prev.spamEnabled })); }} style={{ ...secondaryBtnStyle, padding: '4px 12px', background: spamDraft.spamEnabled !== false ? '#e6f4ea' : '#fce8e6', color: spamDraft.spamEnabled !== false ? '#137333' : '#c5221f', borderColor: 'transparent' }}>
+                        {spamDraft.spamEnabled !== false ? 'ON' : 'OFF'}
+                      </button>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={spamDraft.cooldownEnabled !== false} 
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, cooldownEnabled: e.target.checked }));
-                            }} 
-                          />
-                          <span style={{ color: '#475569' }}>Cooldown (seconds):</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={spamDraft.cooldownSeconds ?? 90}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...slackInputStyle, width: '70px' }}
-                        />
+                        <span style={{ fontSize: '13px', color: '#475569' }}>Cooldown (sec):</span>
+                        <input type="number" value={spamDraft.cooldownSeconds ?? 90} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 })); }} style={{ ...formInputStyle, width: '80px' }} />
                       </div>
-
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={spamDraft.maxRepliesEnabled !== false} 
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, maxRepliesEnabled: e.target.checked }));
-                            }} 
-                          />
-                          <span style={{ color: '#475569' }}>Max Replies:</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={spamDraft.maxReplies ?? 3}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...slackInputStyle, width: '70px' }}
-                        />
+                        <span style={{ fontSize: '13px', color: '#475569' }}>Max Replies:</span>
+                        <input type="number" value={spamDraft.maxReplies ?? 3} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 })); }} style={{ ...formInputStyle, width: '80px' }} />
                       </div>
-
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={spamDraft.windowEnabled !== false} 
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, windowEnabled: e.target.checked }));
-                            }} 
-                          />
-                          <span style={{ color: '#475569' }}>Window (minutes):</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={spamDraft.windowMinutes ?? 10}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
-                          }}
-                          style={{ ...slackInputStyle, width: '70px' }}
-                        />
+                        <span style={{ fontSize: '13px', color: '#475569' }}>Window (mins):</span>
+                        <input type="number" value={spamDraft.windowMinutes ?? 10} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 })); }} style={{ ...formInputStyle, width: '80px' }} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Schedule Controls */}
-                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#1d1c1d' }}>Operating Hours</span>
-                      <div
-                        onClick={() => {
-                          setEditFlags(prev => ({ ...prev, spam: true }));
-                          setSpamDraft(prev => ({ ...prev, scheduleEnabled: !prev.scheduleEnabled }));
-                        }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
-                          background: spamDraft.scheduleEnabled ? '#e6f4ea' : '#fce8e6',
-                          color: spamDraft.scheduleEnabled ? '#137333' : '#c5221f'
-                        }}
-                      >
-                        {spamDraft.scheduleEnabled ? 'ENABLED' : 'DISABLED'}
-                      </div>
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '14px', color: '#1d1c1d' }}>Operating Hours</div>
+                      <button onClick={() => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, scheduleEnabled: !prev.scheduleEnabled })); }} style={{ ...secondaryBtnStyle, padding: '4px 12px', background: spamDraft.scheduleEnabled ? '#e6f4ea' : '#fce8e6', color: spamDraft.scheduleEnabled ? '#137333' : '#c5221f', borderColor: 'transparent' }}>
+                        {spamDraft.scheduleEnabled ? 'ON' : 'OFF'}
+                      </button>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#475569' }}>Mode:</span>
-                        <select
-                          value={spamDraft.scheduleMode || 'ONLY_DURING'}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, scheduleMode: e.target.value }));
-                          }}
-                          style={{ ...slackInputStyle, width: '140px' }}
-                        >
-                          <option value="ONLY_DURING">Reply During Hours</option>
-                          <option value="OUTSIDE_ONLY">Reply Outside Hours</option>
+                        <span style={{ fontSize: '13px', color: '#475569' }}>Mode:</span>
+                        <select value={spamDraft.scheduleMode || 'ONLY_DURING'} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, scheduleMode: e.target.value })); }} style={{ ...formInputStyle, width: '140px' }}>
+                          <option value="ONLY_DURING">During Hours</option>
+                          <option value="OUTSIDE_ONLY">Outside Hours</option>
                         </select>
                       </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#475569' }}>Start / End Time:</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <input
-                            type="time"
-                            value={spamDraft.scheduleStart || '09:00'}
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
-                            }}
-                            style={{ ...slackInputStyle, width: '85px' }}
-                          />
-                          <input
-                            type="time"
-                            value={spamDraft.scheduleEnd || '18:00'}
-                            onChange={(e) => {
-                              setEditFlags(prev => ({ ...prev, spam: true }));
-                              setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
-                            }}
-                            style={{ ...slackInputStyle, width: '85px' }}
-                          />
-                        </div>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <input type="time" value={spamDraft.scheduleStart || '09:00'} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value })); }} style={formInputStyle} />
+                        <input type="time" value={spamDraft.scheduleEnd || '18:00'} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value })); }} style={formInputStyle} />
                       </div>
-
                       <div>
-                        <span style={{ color: '#475569', display: 'block', marginBottom: '4px' }}>Active Days:</span>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                            const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                            const days = spamDraft.scheduleDays || [];
                             const isSelected = days.includes(day);
                             return (
-                              <button
-                                key={day}
-                                onClick={() => {
-                                  const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
-                                  setEditFlags(prev => ({ ...prev, spam: true }));
-                                  setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
-                                }}
-                                style={{
-                                  background: isSelected ? '#1264a3' : '#ffffff',
-                                  border: isSelected ? '1px solid #1264a3' : '1px solid #cbd5e1',
-                                  color: isSelected ? '#ffffff' : '#475569',
-                                  borderRadius: '4px',
-                                  padding: '4px 6px',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {day}
-                              </button>
+                              <button key={day} onClick={() => { const newDays = isSelected ? days.filter(d => d !== day) : [...days, day]; setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, scheduleDays: newDays })); }} style={{ padding: '6px 10px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: isSelected ? 'none' : '1px solid #cbd5e1', background: isSelected ? '#1264a3' : '#ffffff', color: isSelected ? '#ffffff' : '#475569', cursor: 'pointer' }}>{day}</button>
                             );
                           })}
                         </div>
                       </div>
-
-                      <div>
-                        <span style={{ color: '#475569', display: 'block', marginBottom: '4px' }}>Out of Hours Message:</span>
-                        <textarea
-                          rows={2}
-                          value={spamDraft.outOfHoursMsg || ''}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, spam: true }));
-                            setSpamDraft(prev => ({ ...prev, outOfHoursMsg: e.target.value }));
-                          }}
-                          style={{ ...slackInputStyle, resize: 'vertical' }}
-                        />
-                      </div>
+                      <textarea rows={2} placeholder="Out of hours message" value={spamDraft.outOfHoursMsg || ''} onChange={(e) => { setEditFlags(prev => ({ ...prev, spam: true })); setSpamDraft(prev => ({ ...prev, outOfHoursMsg: e.target.value })); }} style={{ ...formInputStyle, resize: 'vertical' }} />
                     </div>
                   </div>
 
                   {editFlags.spam && (
                     <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button onClick={handleSaveSpamSchedule} style={slackPrimaryBtnStyle}>
-                        Save Spam & Schedule Rules
-                      </button>
+                      <button onClick={handleSaveSpamSchedule} style={primaryBtnStyle}>Save Rules Sync</button>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* ─── TAB 5: MANUAL REPLY LIST ─── */}
+            {/* TAB 5: BLACKLIST */}
             {activeTab === 'blacklist' && (
-              <div style={slackCardStyle}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 4px 0', color: '#1d1c1d' }}>
-                  Manual Reply List (Bypass AI)
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0' }}>
-                  Numbers in this list skip automatic AI responses so human staff can answer manually.
-                </p>
-
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <input
-                    id="newBlockInput"
-                    type="text"
-                    placeholder="Enter phone number (+1...)"
-                    style={{ ...slackInputStyle, maxWidth: '280px' }}
-                  />
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById('newBlockInput');
-                      if (el && el.value) {
-                        handleAddBlockedNumber(el.value);
-                        el.value = '';
-                      }
-                    }}
-                    style={slackPrimaryBtnStyle}
-                  >
-                    + Add Number
-                  </button>
+              <div style={panelCardStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 8px 0', color: '#1d1c1d' }}>Manual Reply List</h3>
+                <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 20px 0' }}>Numbers here bypass AI for human response.</p>
+                
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                  <input id="newBlockInput" type="text" placeholder="Phone number..." style={{ ...formInputStyle, maxWidth: '300px' }} />
+                  <button onClick={() => { const el = document.getElementById('newBlockInput'); if (el && el.value) { handleAddBlockedNumber(el.value); el.value = ''; } }} style={primaryBtnStyle}>+ Add</button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {(!selectedUser.blacklist || selectedUser.blacklist.length === 0) ? (
-                    <div style={{ color: '#94a3b8', fontSize: '13px', padding: '16px 0', textAlign: 'center' }}>
-                      No phone numbers in manual reply list.
-                    </div>
+                    <div style={{ color: '#64748b', fontSize: '13px' }}>No numbers blocked.</div>
                   ) : (
                     selectedUser.blacklist.map(phone => (
-                      <div
-                        key={phone}
-                        style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          padding: '10px 14px',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#1d1c1d' }}>{phone}</span>
-                        <button
-                          onClick={() => handleRemoveBlockedNumber(phone)}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#e01e5a',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Remove
-                        </button>
+                      <div key={phone} style={{ border: '1px solid #e2e8f0', background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1d1c1d' }}>{phone}</span>
+                        <button onClick={() => handleRemoveBlockedNumber(phone)} style={{ ...secondaryBtnStyle, color: '#c5221f', padding: '4px 12px' }}>Remove</button>
                       </div>
                     ))
                   )}
                 </div>
               </div>
             )}
-
+            
           </div>
         ) : (
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '48px 20px',
-            textAlign: 'center',
-            color: '#64748b'
-          }}>
-            Select a store account on the left or create a new store to view configuration.
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 120px)', color: '#64748b', fontSize: '15px' }}>
+            Select a store to view details
           </div>
         )}
-
       </div>
 
-      {/* CREATE NEW STORE USER MODAL */}
+      {/* CREATE MODAL */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.45)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px',
-          backdropFilter: 'blur(3px)'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '24px',
-            width: '100%',
-            maxWidth: '420px',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
-            boxSizing: 'border-box'
-          }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 4px 0', color: '#1d1c1d' }}>
-              Create Store Account
-            </h2>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0' }}>
-              Provision client credentials for instant on-device APK login.
-            </p>
-
-            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(29, 28, 29, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '700', color: '#1d1c1d' }}>New Store Account</h2>
+            <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#475569' }}>Provision a new tenant space.</p>
+            
+            <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={slackLabelStyle}>User ID (Required for APK Login)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. store_downtown_01"
-                  value={newUserId}
-                  onChange={(e) => setNewUserId(e.target.value)}
-                  style={slackInputStyle}
-                  required
-                />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>User ID</label>
+                <input type="text" value={newUserId} onChange={e => setNewUserId(e.target.value)} style={formInputStyle} required />
               </div>
-
               <div>
-                <label style={slackLabelStyle}>Password (Required)</label>
-                <input
-                  type="password"
-                  placeholder="Password..."
-                  value={newUserPass}
-                  onChange={(e) => setNewUserPass(e.target.value)}
-                  style={slackInputStyle}
-                  required
-                />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Password</label>
+                <input type="password" value={newUserPass} onChange={e => setNewUserPass(e.target.value)} style={formInputStyle} required />
               </div>
-
               <div>
-                <label style={slackLabelStyle}>Store / Business Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Downtown Bakery"
-                  value={newStoreName}
-                  onChange={(e) => setNewStoreName(e.target.value)}
-                  style={slackInputStyle}
-                />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Store Name</label>
+                <input type="text" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} style={formInputStyle} />
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={slackLabelStyle}>Initial Balance ($)</label>
-                  <input
-                    type="number"
-                    step="1.00"
-                    value={newInitialBal}
-                    onChange={(e) => setNewInitialBal(e.target.value)}
-                    style={slackInputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={slackLabelStyle}>Message Fee ($)</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={newFixedFee}
-                    onChange={(e) => setNewFixedFee(e.target.value)}
-                    style={slackInputStyle}
-                  />
-                </div>
-              </div>
-
-              {createError && (
-                <div style={{ color: '#b91c1c', fontSize: '12px', background: '#fef2f2', padding: '6px 10px', borderRadius: '6px' }}>
-                  {createError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateModal(false); setCreateError(''); }}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#475569',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={slackPrimaryBtnStyle}
-                >
-                  {loading ? 'Creating...' : 'Create Account'}
-                </button>
+              
+              {createError && <div style={{ color: '#c5221f', fontSize: '13px' }}>{createError}</div>}
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} style={secondaryBtnStyle}>Cancel</button>
+                <button type="submit" disabled={loading} style={primaryBtnStyle}>{loading ? 'Saving...' : 'Create'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
+      
+      {/* TOAST */}
+      {saveToast && (
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', background: '#1d1c1d', color: '#ffffff', padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }}>
+          <Check size={16} color="#34a853" />
+          <span style={{ fontSize: '14px', fontWeight: '500' }}>{saveToast}</span>
+        </div>
+      )}
+      
     </div>
   );
 }
-
-// ─── SLACK ENTERPRISE DESIGN STYLES ───
-
-const slackPrimaryBtnStyle = {
-  background: '#007a5a',
-  color: '#ffffff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontWeight: '700',
-  fontSize: '13px',
-  cursor: 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '6px'
-};
-
-const slackSmallBtnStyle = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  color: '#1d1c1d',
-  padding: '4px 8px',
-  borderRadius: '6px',
-  fontSize: '11px',
-  fontWeight: '700',
-  cursor: 'pointer'
-};
-
-const slackCardStyle = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '0 0 12px 12px',
-  padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-};
-
-const slackMetricCardStyle = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '12px'
-};
-
-const slackInputStyle = {
-  width: '100%',
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#1d1c1d',
-  fontSize: '13px',
-  outline: 'none',
-  boxSizing: 'border-box'
-};
-
-const slackLabelStyle = {
-  display: 'block',
-  fontSize: '12px',
-  fontWeight: '600',
-  color: '#334155',
-  marginBottom: '4px'
-};
