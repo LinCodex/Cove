@@ -1463,6 +1463,43 @@ export default function MasterControlPanel({ onBackToHome }) {
                                   </button>
                                 </div>
                               </div>
+
+                              {/* Backup Slot Model & API Base URL */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                                <div>
+                                  <label style={formLabelStyle}>Backup Model Name</label>
+                                  <input
+                                    type="text"
+                                    placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.model || 'Model name...'}
+                                    value={slotData.model || ''}
+                                    onChange={(e) => {
+                                      setEditFlags(prev => ({ ...prev, ai: true }));
+                                      setAiDraft(prev => ({
+                                        ...prev,
+                                        [slotKey]: { ...slotData, model: e.target.value }
+                                      }));
+                                    }}
+                                    style={{ ...customInputStyle, fontSize: '12px', padding: '7px 10px' }}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={formLabelStyle}>API Base URL (Optional Override)</label>
+                                  <input
+                                    type="text"
+                                    placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.baseUrl || 'https://...'}
+                                    value={slotData.baseUrl || ''}
+                                    onChange={(e) => {
+                                      setEditFlags(prev => ({ ...prev, ai: true }));
+                                      setAiDraft(prev => ({
+                                        ...prev,
+                                        [slotKey]: { ...slotData, baseUrl: e.target.value }
+                                      }));
+                                    }}
+                                    style={{ ...customInputStyle, fontSize: '12px', padding: '7px 10px' }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
