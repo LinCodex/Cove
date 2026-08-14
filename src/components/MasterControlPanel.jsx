@@ -545,24 +545,10 @@ export default function MasterControlPanel({ onBackToHome }) {
           boxShadow: '0 20px 40px rgba(0,0,0,0.04)',
           textAlign: 'center'
         }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, #1d61ff 0%, #3b82f6 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px auto',
-            boxShadow: '0 8px 20px rgba(29, 97, 255, 0.2)'
-          }}>
-            <Sparkles size={24} color="#ffffff" />
-          </div>
-
-          <h2 style={{ color: '#0f172a', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0' }}>
+          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.3px' }}>
             Cove Master Control
           </h2>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px 0' }}>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 24px 0', lineHeight: '1.5' }}>
             Enter Master Administrator password to configure store accounts, API keys & sync.
           </p>
 
