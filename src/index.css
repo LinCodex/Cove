@@ -2501,3 +2501,11 @@ html, body {
   }
 }
 
+/* Master Control SaaS Theme & Mobile Optimizations */
+@media (max-width: 900px) {
+  .hidden-mobile-sidebar {
+    display: none !important;
+  }
+}
+
+
