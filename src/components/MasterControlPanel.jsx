@@ -2232,6 +2232,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                   {loading ? 'Creating...' : '+ Create Account'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ─── MODAL: CHANGE STORE CREDENTIALS ─── */}
       {showCredModal && selectedUser && (
         <div style={{
