@@ -527,8 +527,13 @@ export default function MasterControlPanel({ onBackToHome }) {
     }
   };
 
-  const handleSaveProfile = () => {
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [spamSaving, setSpamSaving] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+
+  const handleSaveProfile = async () => {
     if (!selectedUser) return;
+    setProfileSaving(true);
     const updated = { 
       ...selectedUser, 
       storeName: profileDraft.storeName,
@@ -541,27 +546,60 @@ export default function MasterControlPanel({ onBackToHome }) {
     };
 
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
+    const ok = await syncUserToServer(updated);
+    setProfileSaving(false);
     setEditFlags(prev => ({ ...prev, profile: false }));
-    triggerToast('Store Profile & AI FAQ saved and synced!');
+    if (ok) {
+      triggerToast('Store Profile & AI FAQ saved and synced to APK!');
+    } else {
+      triggerToast('⚠️ Profile saved locally (Syncing with server...)');
+    }
   };
 
-  const handleSaveSpamSchedule = () => {
+  const handleSaveSpamSchedule = async () => {
     if (!selectedUser) return;
+    setSpamSaving(true);
     const updated = { ...selectedUser, spamConfig: spamDraft };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
+    const ok = await syncUserToServer(updated);
+    setSpamSaving(false);
     setEditFlags(prev => ({ ...prev, spam: false }));
-    triggerToast('Spam & Schedule rules synced!');
+    if (ok) {
+      triggerToast('Spam & Schedule rules synced to APK!');
+    } else {
+      triggerToast('⚠️ Rules saved locally (Syncing with server...)');
+    }
   };
 
-  const handleSaveAiConfig = () => {
+  const handleSaveAiConfig = async () => {
     if (!selectedUser) return;
-    const updated = { ...selectedUser, aiConfig: aiDraft };
+    setAiSaving(true);
+    const updated = {
+      ...selectedUser,
+      aiConfig: {
+        provider: aiDraft.provider,
+        apiKey: aiDraft.apiKey,
+        model: aiDraft.model,
+        baseUrl: aiDraft.baseUrl,
+        fallbackMessage: aiDraft.fallbackMessage,
+        backupEnabled: aiDraft.backupEnabled,
+        backupSlot1: aiDraft.backupSlot1,
+        backupSlot2: aiDraft.backupSlot2,
+        backupSlot3: aiDraft.backupSlot3,
+        backupSlot4: aiDraft.backupSlot4,
+        backupSlot5: aiDraft.backupSlot5
+      }
+    };
+
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
-    syncUserToServer(updated);
+    const ok = await syncUserToServer(updated);
+    setAiSaving(false);
     setEditFlags(prev => ({ ...prev, ai: false }));
-    triggerToast('AI Models & Backup API Keys saved and pushed to APK!');
+    if (ok) {
+      triggerToast('AI provider & backup chain keys synced to APK!');
+    } else {
+      triggerToast('⚠️ AI keys saved locally (Syncing with server...)');
+    }
   };
 
   const handleAddBlockedNumber = (number) => {
@@ -1170,9 +1208,6 @@ export default function MasterControlPanel({ onBackToHome }) {
                       Configure business profile, services, and FAQ rules for automated customer replies.
                     </p>
                   </div>
-                  <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
-                    Save Store Profile & FAQ
-                  </button>
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
@@ -1231,9 +1266,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
-                    Save Store Profile & Sync to APK
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button 
+                    onClick={handleSaveProfile} 
+                    disabled={profileSaving} 
+                    style={{ ...solidPrimaryBtnStyle, opacity: profileSaving ? 0.7 : 1 }}
+                  >
+                    {profileSaving ? 'Saving & Syncing...' : 'Save Store Profile & Sync to APK'}
                   </button>
                 </div>
               </div>
@@ -1251,9 +1290,6 @@ export default function MasterControlPanel({ onBackToHome }) {
                       Configure this store's primary AI engine and up to 5 automatic fallback keys.
                     </p>
                   </div>
-                  <button onClick={handleSaveAiConfig} style={solidPrimaryBtnStyle}>
-                    Save AI & Backup Keys to APK
-                  </button>
                 </div>
 
                 {/* Primary AI Engine Card */}
@@ -1579,8 +1615,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                  <button onClick={handleSaveAiConfig} style={solidPrimaryBtnStyle}>
-                    Save AI & Backup Keys to APK
+                  <button 
+                    onClick={handleSaveAiConfig} 
+                    disabled={aiSaving} 
+                    style={{ ...solidPrimaryBtnStyle, opacity: aiSaving ? 0.7 : 1 }}
+                  >
+                    {aiSaving ? 'Saving & Syncing...' : 'Save AI & Backup Keys to APK'}
                   </button>
                 </div>
               </div>
@@ -1938,9 +1978,6 @@ export default function MasterControlPanel({ onBackToHome }) {
                       Configure individual rate limits, message limits, and auto-reply business hours.
                     </p>
                   </div>
-                  <button onClick={handleSaveSpamSchedule} style={solidPrimaryBtnStyle}>
-                    Save Spam & Hours Rules
-                  </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
@@ -2188,9 +2225,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={handleSaveSpamSchedule} style={solidPrimaryBtnStyle}>
-                    Save Spam & Hours Rules
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button 
+                    onClick={handleSaveSpamSchedule} 
+                    disabled={spamSaving} 
+                    style={{ ...solidPrimaryBtnStyle, opacity: spamSaving ? 0.7 : 1 }}
+                  >
+                    {spamSaving ? 'Saving & Syncing...' : 'Save Spam & Operating Hours'}
                   </button>
                 </div>
               </div>
