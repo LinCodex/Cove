@@ -56,28 +56,37 @@ export default async function handler(req, res) {
         await addActivities(user.id, recentLogs);
       }
 
-      // 3. If APK reports recent balance transactions, merge them into store history
+      // 3. If APK reports recent balance transactions, merge them into store history and deduct
       if (Array.isArray(recentTx) && recentTx.length > 0) {
         const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
-        const newTx = recentTx
-          .filter(t => !existingIds.has(String(t.id)))
-          .map(t => ({
-            id: t.id || Date.now(),
-            timestampMillis: t.timestampMillis || Date.now(),
-            time: new Date(t.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            date: new Date(t.timestampMillis || Date.now()).toLocaleDateString(),
-            type: (parseFloat(t.amount) || 0) >= 0 ? 'Top-Up' : 'SMS Reply',
-            amount: parseFloat(t.amount) || 0,
-            balanceAfter: user.balance,
-            description: t.description || (t.recipientNumber ? `SMS reply to ${t.recipientNumber}` : 'Auto-reply SMS')
-          }));
+        const newTx = recentTx.filter(t => !existingIds.has(String(t.id)));
 
         if (newTx.length > 0) {
-          user.balanceHistory = [...newTx, ...(user.balanceHistory || [])].slice(0, 200);
+          const sortedNewTx = [...newTx].sort((a, b) => (a.timestampMillis || 0) - (b.timestampMillis || 0));
+          const formattedNewTx = [];
+
+          for (const t of sortedNewTx) {
+            const amt = parseFloat(t.amount) || 0;
+            user.balance = Math.max(0, user.balance + amt);
+            user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : (user.forcedPause ? 'Force Paused' : 'Active');
+
+            formattedNewTx.unshift({
+              id: t.id || Date.now(),
+              timestampMillis: t.timestampMillis || Date.now(),
+              time: new Date(t.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: new Date(t.timestampMillis || Date.now()).toLocaleDateString(),
+              type: amt >= 0 ? 'Top-Up' : 'SMS Reply',
+              amount: amt,
+              balanceAfter: user.balance,
+              description: t.description || (t.recipientNumber ? `SMS reply to ${t.recipientNumber}` : 'Auto-reply SMS')
+            });
+          }
+
+          user.balanceHistory = [...formattedNewTx, ...(user.balanceHistory || [])].slice(0, 200);
         }
       }
 
-      // 4. Safely sync client deductions into server balance without decay loops
+      // 4. Safely reconcile client balance
       if (body.currentBalance != null && !isNaN(parseFloat(body.currentBalance))) {
         const apkBalance = parseFloat(body.currentBalance);
         if (apkBalance < user.balance) {
