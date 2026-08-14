@@ -27,8 +27,46 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  Sliders
+  Sliders,
+  Key,
+  Layers,
+  Eye,
+  EyeOff,
+  Bot
 } from 'lucide-react';
+
+const PROVIDER_DEFAULTS = {
+  GEMINI: {
+    name: 'Google Gemini',
+    model: 'gemini-3.1-flash-lite',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    placeholder: 'AIzaSy...'
+  },
+  OPENAI: {
+    name: 'OpenAI (ChatGPT)',
+    model: 'gpt-4o-mini',
+    baseUrl: 'https://api.openai.com/v1',
+    placeholder: 'sk-proj-...'
+  },
+  GROK: {
+    name: 'xAI Grok',
+    model: 'grok-4.1-fast',
+    baseUrl: 'https://api.x.ai/v1',
+    placeholder: 'xai-...'
+  },
+  DEEPSEEK: {
+    name: 'DeepSeek',
+    model: 'deepseek-v4-flash',
+    baseUrl: 'https://api.deepseek.com',
+    placeholder: 'sk-...'
+  },
+  CLAUDE: {
+    name: 'Anthropic Claude',
+    model: 'claude-3-5-haiku-20241022',
+    baseUrl: 'https://api.anthropic.com/v1',
+    placeholder: 'sk-ant-...'
+  }
+};
 
 export default function MasterControlPanel({ onBackToHome }) {
   // Authentication State
@@ -40,12 +78,13 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation and UI State
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'activity', 'spam_schedule', 'pricing', 'blacklist'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'ai_keys', 'activity', 'spam_schedule', 'pricing', 'blacklist'
   const [searchQuery, setSearchQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState('all');
   const [saveToast, setSaveToast] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPasswordMap, setShowPasswordMap] = useState({});
+  const [showKeyMap, setShowKeyMap] = useState({});
   const [loading, setLoading] = useState(false);
 
   // New User Form State
@@ -71,10 +110,24 @@ export default function MasterControlPanel({ onBackToHome }) {
     aiRules: '' 
   });
   const [spamDraft, setSpamDraft] = useState({});
-  const [editFlags, setEditFlags] = useState({ profile: false, spam: false });
+  const [aiDraft, setAiDraft] = useState({
+    provider: 'GEMINI',
+    apiKey: '',
+    model: 'gemini-3.1-flash-lite',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    fallbackMessage: 'Thank you for reaching out! We received your message and will reply shortly.',
+    backupEnabled: true,
+    backupSlot1: { enabled: false, provider: 'OPENAI', apiKey: '', model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1' },
+    backupSlot2: { enabled: false, provider: 'GROK', apiKey: '', model: 'grok-4.1-fast', baseUrl: 'https://api.x.ai/v1' },
+    backupSlot3: { enabled: false, provider: 'DEEPSEEK', apiKey: '', model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com' },
+    backupSlot4: { enabled: false, provider: 'CLAUDE', apiKey: '', model: 'claude-3-5-haiku-20241022', baseUrl: 'https://api.anthropic.com/v1' },
+    backupSlot5: { enabled: false, provider: 'GEMINI', apiKey: '', model: 'gemini-3.1-flash-lite', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' }
+  });
+
+  const [editFlags, setEditFlags] = useState({ profile: false, spam: false, ai: false });
 
   useEffect(() => {
-    setEditFlags({ profile: false, spam: false });
+    setEditFlags({ profile: false, spam: false, ai: false });
   }, [selectedUserId]);
 
   useEffect(() => {
@@ -83,11 +136,12 @@ export default function MasterControlPanel({ onBackToHome }) {
       setProfileDraft(prev => editFlags.profile ? prev : { 
         storeName: u.storeName || u.id, 
         phone: u.phone || '', 
-        address: u.address || '',
+        address: u.address || '', 
         businessInfo: u.businessProfile?.businessInfo || '', 
         replyTone: u.businessProfile?.replyTone || 'Professional, friendly, and concise', 
         aiRules: u.businessProfile?.aiRules || '' 
       });
+
       setSpamDraft(prev => editFlags.spam ? prev : { 
         spamEnabled: u.spamConfig?.spamEnabled ?? true,
         cooldownEnabled: u.spamConfig?.cooldownEnabled ?? true,
@@ -102,6 +156,20 @@ export default function MasterControlPanel({ onBackToHome }) {
         scheduleEnd: u.spamConfig?.scheduleEnd || '18:00',
         scheduleDays: u.spamConfig?.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
         outOfHoursMsg: u.spamConfig?.outOfHoursMsg || 'Thanks for contacting us! We are currently closed.'
+      });
+
+      setAiDraft(prev => editFlags.ai ? prev : {
+        provider: u.aiConfig?.provider || 'GEMINI',
+        apiKey: u.aiConfig?.apiKey || '',
+        model: u.aiConfig?.model || PROVIDER_DEFAULTS[u.aiConfig?.provider || 'GEMINI'].model,
+        baseUrl: u.aiConfig?.baseUrl || PROVIDER_DEFAULTS[u.aiConfig?.provider || 'GEMINI'].baseUrl,
+        fallbackMessage: u.aiConfig?.fallbackMessage || 'Thank you for reaching out! We received your message and will reply shortly.',
+        backupEnabled: u.aiConfig?.backupEnabled ?? true,
+        backupSlot1: u.aiConfig?.backupSlot1 || { enabled: false, provider: 'OPENAI', apiKey: '', model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1' },
+        backupSlot2: u.aiConfig?.backupSlot2 || { enabled: false, provider: 'GROK', apiKey: '', model: 'grok-4.1-fast', baseUrl: 'https://api.x.ai/v1' },
+        backupSlot3: u.aiConfig?.backupSlot3 || { enabled: false, provider: 'DEEPSEEK', apiKey: '', model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com' },
+        backupSlot4: u.aiConfig?.backupSlot4 || { enabled: false, provider: 'CLAUDE', apiKey: '', model: 'claude-3-5-haiku-20241022', baseUrl: 'https://api.anthropic.com/v1' },
+        backupSlot5: u.aiConfig?.backupSlot5 || { enabled: false, provider: 'GEMINI', apiKey: '', model: 'gemini-3.1-flash-lite', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' }
       });
     }
   }, [selectedUserId, users, editFlags]);
@@ -296,6 +364,19 @@ export default function MasterControlPanel({ onBackToHome }) {
           scheduleDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
           outOfHoursMsg: 'Thanks for contacting us! We are currently closed.'
         },
+        aiConfig: {
+          provider: 'GEMINI',
+          apiKey: '',
+          model: 'gemini-3.1-flash-lite',
+          baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+          fallbackMessage: 'Thank you for reaching out! We received your message and will reply shortly.',
+          backupEnabled: true,
+          backupSlot1: { enabled: false, provider: 'OPENAI', apiKey: '', model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1' },
+          backupSlot2: { enabled: false, provider: 'GROK', apiKey: '', model: 'grok-4.1-fast', baseUrl: 'https://api.x.ai/v1' },
+          backupSlot3: { enabled: false, provider: 'DEEPSEEK', apiKey: '', model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com' },
+          backupSlot4: { enabled: false, provider: 'CLAUDE', apiKey: '', model: 'claude-3-5-haiku-20241022', baseUrl: 'https://api.anthropic.com/v1' },
+          backupSlot5: { enabled: false, provider: 'GEMINI', apiKey: '', model: 'gemini-3.1-flash-lite', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' }
+        },
         blacklist: []
       };
 
@@ -385,6 +466,15 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast('Spam & Schedule rules synced!');
   };
 
+  const handleSaveAiConfig = () => {
+    if (!selectedUser) return;
+    const updated = { ...selectedUser, aiConfig: aiDraft };
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+    syncUserToServer(updated);
+    setEditFlags(prev => ({ ...prev, ai: false }));
+    triggerToast('AI Models & Backup API Keys saved and pushed to APK!');
+  };
+
   const handleAddBlockedNumber = (number) => {
     if (!selectedUser || !number.trim()) return;
     const clean = number.trim();
@@ -449,7 +539,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             Cove Master Control
           </h2>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px 0' }}>
-            Enter Master Administrator password to manage store accounts and live APK sync.
+            Enter Master Administrator password to configure store accounts, API keys & sync.
           </p>
 
           <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -762,7 +852,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     {(selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active'}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
                   <span>User ID: <strong>{selectedUser.id}</strong></span>
                   <span>APK Password: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
                     <button 
@@ -772,6 +862,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       {showPasswordMap[selectedUser.id] ? 'Hide' : 'Show'}
                     </button>
                   </span>
+                  <span>Active AI: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong></span>
                 </div>
               </div>
 
@@ -858,7 +949,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   {selectedUser.activities?.length || 0}
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  Model: <strong>Gemini 3.1 Flash Lite</strong>
+                  Primary Provider: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong>
                 </div>
               </div>
 
@@ -886,9 +977,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               flexWrap: 'wrap'
             }}>
               {[
-                { id: 'profile', label: 'Store Profile & AI FAQ', icon: FileText },
+                { id: 'profile', label: 'Store Profile & FAQ', icon: FileText },
+                { id: 'ai_keys', label: 'AI Keys & Backups', icon: Key },
                 { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
-                { id: 'spam_schedule', label: 'Spam & Business Hours', icon: Clock },
+                { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
                 { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
                 { id: 'blacklist', label: 'Manual Reply List', icon: Ban }
               ].map(tab => {
@@ -924,7 +1016,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             {activeTab === 'profile' && (
               <div style={cardSectionStyle}>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
-                  Store Profile & AI Instructions
+                  Store Profile & AI FAQ Knowledge
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
@@ -971,7 +1063,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={formLabelStyle}>Business Details, Services & FAQ Knowledge</label>
+                  <label style={formLabelStyle}>Business Details, Services & FAQ Knowledge Base</label>
                   <textarea
                     rows={4}
                     value={profileDraft.businessInfo || ''}
@@ -1007,7 +1099,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       setEditFlags(prev => ({ ...prev, profile: true }));
                       setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
                     }}
-                    placeholder="e.g. Never guarantee same-day delivery without manager approval."
+                    placeholder="e.g. Never guarantee discounts without manager approval."
                     style={{ ...customInputStyle, resize: 'vertical' }}
                   />
                 </div>
@@ -1020,7 +1112,317 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* ─── TAB 2: LIVE SMS ACTIVITY ─── */}
+            {/* ─── TAB 2: AI KEYS & BACKUP CHAIN CONFIGURATION ─── */}
+            {activeTab === 'ai_keys' && (
+              <div style={cardSectionStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      AI Provider & Backup API Key Chain
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                      Configure this store's primary AI engine and up to 5 automatic fallback keys.
+                    </p>
+                  </div>
+                  <button onClick={handleSaveAiConfig} style={solidPrimaryBtnStyle}>
+                    Save AI & Backup Keys to APK
+                  </button>
+                </div>
+
+                {/* Primary AI Engine Card */}
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#1d61ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Zap size={14} color="#ffffff" />
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
+                      Primary AI Provider
+                    </span>
+                  </div>
+
+                  {/* Provider Selector Chips */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={formLabelStyle}>Select Primary Engine</label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {Object.keys(PROVIDER_DEFAULTS).map(provKey => {
+                        const isSelected = aiDraft.provider === provKey;
+                        const pInfo = PROVIDER_DEFAULTS[provKey];
+                        return (
+                          <button
+                            key={provKey}
+                            type="button"
+                            onClick={() => {
+                              setEditFlags(prev => ({ ...prev, ai: true }));
+                              setAiDraft(prev => ({
+                                ...prev,
+                                provider: provKey,
+                                model: pInfo.model,
+                                baseUrl: pInfo.baseUrl
+                              }));
+                            }}
+                            style={{
+                              background: isSelected ? '#0f172a' : '#ffffff',
+                              border: isSelected ? '1.5px solid #0f172a' : '1.5px solid #e2e8f0',
+                              color: isSelected ? '#ffffff' : '#475569',
+                              borderRadius: '8px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {pInfo.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Primary API Key */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={formLabelStyle}>Primary API Key ({aiDraft.provider})</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showKeyMap['primary'] ? 'text' : 'password'}
+                        placeholder={PROVIDER_DEFAULTS[aiDraft.provider]?.placeholder || 'Enter API Key...'}
+                        value={aiDraft.apiKey || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, ai: true }));
+                          setAiDraft(prev => ({ ...prev, apiKey: e.target.value }));
+                        }}
+                        style={{ ...customInputStyle, paddingRight: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowKeyMap(prev => ({ ...prev, primary: !prev['primary'] }))}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#94a3b8'
+                        }}
+                      >
+                        {showKeyMap['primary'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Model & Base URL Overrides */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                    <div>
+                      <label style={formLabelStyle}>Model Name</label>
+                      <input
+                        type="text"
+                        value={aiDraft.model || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, ai: true }));
+                          setAiDraft(prev => ({ ...prev, model: e.target.value }));
+                        }}
+                        style={customInputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={formLabelStyle}>API Base URL (Optional Override)</label>
+                      <input
+                        type="text"
+                        value={aiDraft.baseUrl || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, ai: true }));
+                          setAiDraft(prev => ({ ...prev, baseUrl: e.target.value }));
+                        }}
+                        style={customInputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fallback Static Message */}
+                  <div>
+                    <label style={formLabelStyle}>Static Fallback Message (If AI fails or balance depleted)</label>
+                    <textarea
+                      rows={2}
+                      value={aiDraft.fallbackMessage || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, ai: true }));
+                        setAiDraft(prev => ({ ...prev, fallbackMessage: e.target.value }));
+                      }}
+                      style={{ ...customInputStyle, resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Backup API Key Fallback Chain (Slots 1 to 5) */}
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Layers size={14} color="#ffffff" />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
+                          Backup API Fallback Chain (5 Slots)
+                        </span>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          If the primary key hits a rate limit or 500 error, APK automatically tries enabled backup slots sequentially.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Enable Backup Chain:</span>
+                      <CustomSwitch
+                        checked={aiDraft.backupEnabled !== false}
+                        onChange={(checked) => {
+                          setEditFlags(prev => ({ ...prev, ai: true }));
+                          setAiDraft(prev => ({ ...prev, backupEnabled: checked }));
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5 Backup Slots */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[1, 2, 3, 4, 5].map(slotNum => {
+                      const slotKey = `backupSlot${slotNum}`;
+                      const slotData = aiDraft[slotKey] || { enabled: false, provider: 'GEMINI', apiKey: '', model: '', baseUrl: '' };
+                      const isEnabled = slotData.enabled === true;
+
+                      return (
+                        <div
+                          key={slotNum}
+                          style={{
+                            background: '#ffffff',
+                            border: isEnabled ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '14px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isEnabled ? '12px' : '0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: isEnabled ? '#0f172a' : '#e2e8f0',
+                                color: isEnabled ? '#ffffff' : '#64748b',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                {slotNum}
+                              </span>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                                Backup Slot {slotNum}: {PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.name}
+                              </span>
+                            </div>
+
+                            <CustomSwitch
+                              checked={isEnabled}
+                              onChange={(checked) => {
+                                setEditFlags(prev => ({ ...prev, ai: true }));
+                                setAiDraft(prev => ({
+                                  ...prev,
+                                  [slotKey]: { ...slotData, enabled: checked }
+                                }));
+                              }}
+                            />
+                          </div>
+
+                          {isEnabled && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                              {/* Provider Chips for Slot */}
+                              <div>
+                                <label style={formLabelStyle}>Backup Provider</label>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  {Object.keys(PROVIDER_DEFAULTS).map(provKey => (
+                                    <button
+                                      key={provKey}
+                                      type="button"
+                                      onClick={() => {
+                                        setEditFlags(prev => ({ ...prev, ai: true }));
+                                        const pInfo = PROVIDER_DEFAULTS[provKey];
+                                        setAiDraft(prev => ({
+                                          ...prev,
+                                          [slotKey]: {
+                                            ...slotData,
+                                            provider: provKey,
+                                            model: pInfo.model,
+                                            baseUrl: pInfo.baseUrl
+                                          }
+                                        }));
+                                      }}
+                                      style={{
+                                        background: slotData.provider === provKey ? '#0f172a' : '#f8fafc',
+                                        border: slotData.provider === provKey ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                                        color: slotData.provider === provKey ? '#ffffff' : '#475569',
+                                        borderRadius: '6px',
+                                        padding: '4px 10px',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {PROVIDER_DEFAULTS[provKey].name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Backup API Key */}
+                              <div>
+                                <label style={formLabelStyle}>Backup API Key</label>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                  <input
+                                    type={showKeyMap[slotKey] ? 'text' : 'password'}
+                                    placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.placeholder || 'Enter API Key...'}
+                                    value={slotData.apiKey || ''}
+                                    onChange={(e) => {
+                                      setEditFlags(prev => ({ ...prev, ai: true }));
+                                      setAiDraft(prev => ({
+                                        ...prev,
+                                        [slotKey]: { ...slotData, apiKey: e.target.value }
+                                      }));
+                                    }}
+                                    style={{ ...customInputStyle, paddingRight: '40px' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowKeyMap(prev => ({ ...prev, [slotKey]: !prev[slotKey] }))}
+                                    style={{
+                                      position: 'absolute',
+                                      right: '10px',
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      color: '#94a3b8'
+                                    }}
+                                  >
+                                    {showKeyMap[slotKey] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button onClick={handleSaveAiConfig} style={solidPrimaryBtnStyle}>
+                    Save AI & Backup Keys to APK
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── TAB 3: LIVE SMS ACTIVITY ─── */}
             {activeTab === 'activity' && (
               <div style={cardSectionStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1097,7 +1499,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* ─── TAB 3: SPAM & BUSINESS HOURS ─── */}
+            {/* ─── TAB 4: SPAM & BUSINESS HOURS ─── */}
             {activeTab === 'spam_schedule' && (
               <div style={cardSectionStyle}>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
@@ -1241,7 +1643,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* ─── TAB 4: PRICING & TOKEN RATES ─── */}
+            {/* ─── TAB 5: PRICING & TOKEN RATES ─── */}
             {activeTab === 'pricing' && (
               <div style={cardSectionStyle}>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
@@ -1342,7 +1744,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
             )}
 
-            {/* ─── TAB 5: MANUAL REPLY LIST ─── */}
+            {/* ─── TAB 6: MANUAL REPLY LIST ─── */}
             {activeTab === 'blacklist' && (
               <div style={cardSectionStyle}>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
@@ -1403,7 +1805,7 @@ export default function MasterControlPanel({ onBackToHome }) {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
-            Select a store account from the left sidebar to manage controls and live activity.
+            Select a store account from the left sidebar to manage controls, API keys, and live activity.
           </div>
         )}
 

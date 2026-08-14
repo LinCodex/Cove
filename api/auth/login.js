@@ -57,6 +57,7 @@ export default async function handler(req, res) {
       customOutputPrice1M: user.customOutputPrice1M,
       businessProfile: user.businessProfile,
       spamConfig: user.spamConfig,
+      aiConfig: user.aiConfig || {},
       blacklist: user.blacklist || []
     });
   } catch (error) {

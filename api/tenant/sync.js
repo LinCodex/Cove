@@ -65,6 +65,7 @@ export default async function handler(req, res) {
       },
       businessProfile: user.businessProfile,
       spamConfig: user.spamConfig,
+      aiConfig: user.aiConfig || {},
       blacklist: user.blacklist || [],
       activities,
       serverTime: Date.now()
