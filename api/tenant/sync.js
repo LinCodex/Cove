@@ -27,9 +27,29 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { recentLogs, recentTx } = body;
+      const { recentLogs, recentTx, businessProfile, spamConfig, aiConfig, blacklist, storeName, phone } = body;
 
-      // If APK reports recent activity logs, record them in activities table
+      // 1. If APK reports configuration updates, persist to store
+      if (businessProfile && typeof businessProfile === 'object') {
+        user.businessProfile = { ...(user.businessProfile || {}), ...businessProfile };
+      }
+      if (spamConfig && typeof spamConfig === 'object') {
+        user.spamConfig = { ...(user.spamConfig || {}), ...spamConfig };
+      }
+      if (aiConfig && typeof aiConfig === 'object') {
+        user.aiConfig = { ...(user.aiConfig || {}), ...aiConfig };
+      }
+      if (Array.isArray(blacklist)) {
+        user.blacklist = blacklist;
+      }
+      if (storeName && typeof storeName === 'string') {
+        user.storeName = storeName.trim();
+      }
+      if (phone && typeof phone === 'string') {
+        user.phone = phone.trim();
+      }
+
+      // 2. If APK reports recent activity logs, record them in activities table
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
         await addActivities(user.id, recentLogs);
         user.totalRequests = (user.totalRequests || 0) + recentLogs.length;
@@ -42,7 +62,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // If APK reports recent balance transactions, merge them
+      // 3. If APK reports recent balance transactions, merge them
       if (Array.isArray(recentTx) && recentTx.length > 0) {
         const existingIds = new Set((user.balanceHistory || []).map(t => String(t.id)));
         const newTx = recentTx
@@ -77,7 +97,8 @@ export default async function handler(req, res) {
       phone: user.phone || '',
       address: user.address || '',
       balance: user.balance,
-      status: user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active',
+      status: user.forcedPause ? 'Force Paused' : (user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active'),
+      forcedPause: Boolean(user.forcedPause),
       pricing: {
         pricingMode: user.pricingMode,
         fixedFeePerMessage: user.fixedFeePerMessage,

@@ -35,6 +35,7 @@ function rowToUser(row) {
     customOutputPrice1M: parseFloat(row.custom_output_price_1m),
     totalRequests: row.total_requests || 0,
     lastActive: new Date(row.last_active).getTime(),
+    forcedPause: Boolean(row.forced_pause),
     businessProfile: row.business_profile || {},
     spamConfig: row.spam_config || {},
     aiConfig: row.ai_config || {},
@@ -56,6 +57,7 @@ function userToRow(user) {
   if (user.address != null) row.address = user.address;
   if (user.balance != null) row.balance = parseFloat(user.balance) || 0;
   if (user.status != null) row.status = user.status;
+  if (user.forcedPause != null) row.forced_pause = Boolean(user.forcedPause);
   if (user.pricingMode != null || user.pricing_mode != null) row.pricing_mode = user.pricingMode ?? user.pricing_mode;
   if (user.fixedFeePerMessage != null || user.fixed_fee_per_message != null) row.fixed_fee_per_message = parseFloat(user.fixedFeePerMessage ?? user.fixed_fee_per_message) || 0.0050;
   if (user.customInputPrice1M != null || user.custom_input_price_1m != null) row.custom_input_price_1m = parseFloat(user.customInputPrice1M ?? user.custom_input_price_1m) || 0.25;

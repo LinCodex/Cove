@@ -1066,11 +1066,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                     borderRadius: '12px',
                     fontSize: '11px',
                     fontWeight: '700',
-                    background: (selectedUser.balance || 0) <= 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                    color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669',
-                    border: `1px solid ${(selectedUser.balance || 0) <= 0 ? '#fca5a5' : '#86efac'}`
+                    background: selectedUser.forcedPause ? 'rgba(220, 38, 38, 0.15)' : ((selectedUser.balance || 0) <= 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'),
+                    color: selectedUser.forcedPause ? '#dc2626' : ((selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669'),
+                    border: `1px solid ${selectedUser.forcedPause ? '#fca5a5' : ((selectedUser.balance || 0) <= 0 ? '#fca5a5' : '#86efac')}`
                   }}>
-                    {(selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active'}
+                    {selectedUser.forcedPause ? '⛔ Force Paused by Admin' : ((selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active')}
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
@@ -1088,7 +1088,38 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
 
               {/* Header Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Force Pause / Resume Auto-Reply Toggle */}
+                <button
+                  onClick={() => {
+                    const nextForced = !selectedUser.forcedPause;
+                    const updated = {
+                      ...selectedUser,
+                      forcedPause: nextForced,
+                      status: nextForced ? 'Force Paused' : ((selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Active')
+                    };
+                    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+                    syncUserToServer(updated);
+                    triggerToast(nextForced ? 'Store auto-reply FORCE PAUSED' : 'Store auto-reply RESUMED');
+                  }}
+                  style={{
+                    background: selectedUser.forcedPause ? '#fee2e2' : '#f8fafc',
+                    border: selectedUser.forcedPause ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: selectedUser.forcedPause ? '#dc2626' : '#334155'
+                  }}
+                >
+                  <Ban size={13} color={selectedUser.forcedPause ? '#dc2626' : '#64748b'} />
+                  <span>{selectedUser.forcedPause ? '⛔ Resume Auto-Reply' : '⏸️ Force Pause APK'}</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setCredUserId(selectedUser.id);
