@@ -88,6 +88,7 @@ export default async function handler(req, res) {
       spamConfig: user.spamConfig,
       aiConfig: user.aiConfig || {},
       blacklist: user.blacklist || [],
+      balanceHistory: user.balanceHistory || [],
       activities,
       serverTime: Date.now()
     });

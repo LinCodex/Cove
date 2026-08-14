@@ -1162,7 +1162,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               {[
                 { id: 'profile', label: 'Store Profile & FAQ', icon: FileText },
                 { id: 'ai_keys', label: 'AI Keys & Backups', icon: Key },
-                { id: 'balance_history', label: 'Balance & Ledger', icon: Receipt },
+                { id: 'balance_history', label: 'Balance', icon: Receipt },
                 { id: 'activity', label: 'Live SMS Activity', icon: MessageSquare },
                 { id: 'spam_schedule', label: 'Spam & Hours', icon: Clock },
                 { id: 'pricing', label: 'Pricing & Token Rates', icon: DollarSign },
@@ -1701,33 +1701,6 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Wallet size={14} color="#0f172a" />
                     <span>Manage Store Funds</span>
-                  </div>
-
-                  {/* Quick Preset Buttons */}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                    {[5, 10, 20, 50, 100].map(amt => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => handleUpdateBalance(amt, `Admin Quick Top-Up +$${amt}.00`)}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          color: '#059669',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Plus size={12} />
-                        <span>${amt}.00</span>
-                      </button>
-                    ))}
                   </div>
 
                   {/* Custom Amount Form */}
