@@ -1,4 +1,4 @@
-import { getUser, createUser, parseBody } from '../_db.js';
+import { getUser, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   // CORS Headers for Android APK & Web Clients
@@ -31,17 +31,13 @@ export default async function handler(req, res) {
     const cleanId = userId.trim();
     const cleanPass = password.trim();
 
-    let user = await getUser(cleanId);
+    const user = await getUser(cleanId);
 
     if (!user) {
-      // If user doesn't exist yet, auto-provision user on master server
-      user = await createUser({
-        id: cleanId,
-        password: cleanPass,
-        storeName: cleanId,
-        balance: 10.00
-      });
-    } else if (user.password && user.password !== cleanPass) {
+      return res.status(401).json({ error: 'Account not found. Please contact your administrator.' });
+    }
+
+    if (user.password !== cleanPass) {
       return res.status(401).json({ error: 'Incorrect password for this User ID' });
     }
 

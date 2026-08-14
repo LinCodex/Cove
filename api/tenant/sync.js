@@ -1,4 +1,4 @@
-import { getUser, saveUser, parseBody } from '../_db.js';
+import { getUser, createUser, saveUser, addActivities, getActivities, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -29,32 +29,16 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { currentBalance, recentLogs } = body;
 
-      // If APK reports recent activity logs, append to server activities
+      // If APK reports recent activity logs, insert into activities table
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
-        const existingIds = new Set((user.activities || []).map(a => String(a.id)));
-        const newActivities = recentLogs
-          .filter(l => l && !existingIds.has(String(l.id)))
-          .map(l => ({
-            id: String(l.id || `act_${Date.now()}_${Math.random()}`),
-            time: new Date(l.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            sender: l.sender || 'Customer',
-            incoming: l.incoming || '',
-            reply: l.reply || '',
-            status: l.status || 'Sent',
-            tokensIn: l.inputTokens || 0,
-            tokensOut: l.outputTokens || 0,
-            cost: user.fixedFeePerMessage || 0.0050
-          }));
+        await addActivities(user.id, recentLogs);
 
-        if (newActivities.length > 0) {
-          user.activities = [...newActivities, ...(user.activities || [])].slice(0, 200);
-          user.totalRequests = (user.totalRequests || 0) + newActivities.length;
-        }
+        // Update total request count
+        user.totalRequests = (user.totalRequests || 0) + recentLogs.length;
       }
 
-      // If APK sent a valid deduction, update server balance if server didn't explicitly override
+      // If APK sent a valid deduction, update server balance
       if (typeof currentBalance === 'number' && !isNaN(currentBalance)) {
-        // If server balance wasn't manually set to 0.000 by admin
         if (user.balance > 0 && currentBalance < user.balance) {
           user.balance = Math.max(0, currentBalance);
           user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active';
@@ -63,6 +47,9 @@ export default async function handler(req, res) {
 
       await saveUser(user);
     }
+
+    // Load recent activities for this store
+    const activities = await getActivities(user.id, 200);
 
     // Return latest live config to client APK
     return res.status(200).json({
@@ -80,6 +67,7 @@ export default async function handler(req, res) {
       businessProfile: user.businessProfile,
       spamConfig: user.spamConfig,
       blacklist: user.blacklist || [],
+      activities,
       serverTime: Date.now()
     });
   } catch (error) {

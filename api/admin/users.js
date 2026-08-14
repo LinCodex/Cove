@@ -54,6 +54,8 @@ export default async function handler(req, res) {
         } else {
           user = { ...user, ...data };
           await saveUser(user);
+          // Re-read to get the canonical row
+          user = await getUser(data.id);
         }
         return res.status(200).json({ success: true, user });
       }

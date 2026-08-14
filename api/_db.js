@@ -1,174 +1,132 @@
 // Centralized Data & Persistence Layer for Cove Master Control & Client APKs
-// Uses High-Availability Persistent JSON Storage Bin + Vercel KV / Upstash Redis + In-Memory Cache.
+// Powered by Supabase PostgreSQL — globally consistent, zero rate limits.
 
-const PRIMARY_DB_URL = process.env.COVE_STORAGE_BIN_URL || 'https://extendsclass.com/api/json-storage/bin/cbfcdbf';
+import { createClient } from '@supabase/supabase-js';
 
-// Global in-memory cache shared across warm function invocations
-if (!globalThis._coveUsersStore) {
-  globalThis._coveUsersStore = {};
-}
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://nnpvbdcslplqevfcxcuf.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ucHZiZGNzbHBscWV2ZmN4Y3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTI0ODgsImV4cCI6MjEwMjI4ODQ4OH0.ufGGY30xQ5prEPH3ayJ-e4p5TzWxB2TWMWNC6_qr6u4';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── Helpers ────────────────────────────────────────────────
 
 export function parseBody(req) {
   if (!req.body) return {};
   if (typeof req.body === 'object') return req.body;
   if (typeof req.body === 'string') {
-    try {
-      return JSON.parse(req.body);
-    } catch (e) {
-      return {};
-    }
+    try { return JSON.parse(req.body); } catch { return {}; }
   }
   return {};
 }
 
-// Pull latest store state from persistent cloud database with zero cache
-async function syncFromCloud() {
-  try {
-    const res = await fetch(`${PRIMARY_DB_URL}?_cb=${Date.now()}`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.users) {
-        globalThis._coveUsersStore = { ...json.users };
-        return globalThis._coveUsersStore;
-      }
-    }
-  } catch (e) {
-    console.error('Cloud DB pull error:', e);
-  }
-  return globalThis._coveUsersStore;
+/** Convert a Supabase row into the JSON shape the API and APK expect. */
+function rowToUser(row) {
+  return {
+    id: row.id,
+    password: row.password,
+    storeName: row.store_name,
+    phone: row.phone || '',
+    address: row.address || '',
+    balance: parseFloat(row.balance),
+    status: row.status,
+    pricingMode: row.pricing_mode,
+    fixedFeePerMessage: parseFloat(row.fixed_fee_per_message),
+    customInputPrice1M: parseFloat(row.custom_input_price_1m),
+    customOutputPrice1M: parseFloat(row.custom_output_price_1m),
+    totalRequests: row.total_requests || 0,
+    lastActive: new Date(row.last_active).getTime(),
+    businessProfile: row.business_profile || {},
+    spamConfig: row.spam_config || {},
+    blacklist: row.blacklist || [],
+    activities: [],  // loaded separately when needed
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
 }
 
-// Push updated store state to persistent cloud database with fresh merge
-async function syncToCloud() {
-  try {
-    // 1. Pull latest from cloud first to avoid overwriting other instances
-    const res = await fetch(`${PRIMARY_DB_URL}?_cb=${Date.now()}`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
-    let cloudUsers = {};
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.users) {
-        cloudUsers = json.users;
-      }
-    }
-
-    // 2. Merge local updates with cloud users
-    const merged = { ...cloudUsers, ...globalThis._coveUsersStore };
-    globalThis._coveUsersStore = merged;
-
-    // 3. Persist back to cloud
-    await fetch(PRIMARY_DB_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ users: merged })
-    });
-  } catch (e) {
-    console.error('Cloud DB push error:', e);
-  }
+/** Convert API/frontend user object into Supabase row shape. */
+function userToRow(user) {
+  const row = {};
+  if (user.id != null) row.id = user.id;
+  if (user.password != null) row.password = user.password;
+  if (user.storeName != null) row.store_name = user.storeName;
+  if (user.phone != null) row.phone = user.phone;
+  if (user.address != null) row.address = user.address;
+  if (user.balance != null) row.balance = user.balance;
+  if (user.status != null) row.status = user.status;
+  if (user.pricingMode != null) row.pricing_mode = user.pricingMode;
+  if (user.fixedFeePerMessage != null) row.fixed_fee_per_message = user.fixedFeePerMessage;
+  if (user.customInputPrice1M != null) row.custom_input_price_1m = user.customInputPrice1M;
+  if (user.customOutputPrice1M != null) row.custom_output_price_1m = user.customOutputPrice1M;
+  if (user.totalRequests != null) row.total_requests = user.totalRequests;
+  if (user.businessProfile != null) row.business_profile = user.businessProfile;
+  if (user.spamConfig != null) row.spam_config = user.spamConfig;
+  if (user.blacklist != null) row.blacklist = user.blacklist;
+  row.last_active = new Date().toISOString();
+  return row;
 }
 
-// Remote KV helpers (Upstash Redis or Vercel KV)
-async function kvGet(key) {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const res = await fetch(`${url}/get/${key}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (data && data.result) {
-      return typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-    }
-  } catch (e) {
-    console.error('KV get error:', e);
-  }
-  return null;
-}
-
-async function kvSet(key, value) {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return false;
-
-  try {
-    await fetch(`${url}/set/${key}`, {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(typeof value === 'string' ? value : JSON.stringify(value))
-    });
-    return true;
-  } catch (e) {
-    console.error('KV set error:', e);
-    return false;
-  }
-}
+// ─── CRUD Operations ────────────────────────────────────────
 
 export async function getAllUsers() {
-  await syncFromCloud();
-  const remote = await kvGet('cove_all_users');
-  if (remote) {
-    globalThis._coveUsersStore = { ...globalThis._coveUsersStore, ...remote };
+  const { data, error } = await supabase
+    .from('stores')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('getAllUsers error:', error); return []; }
+
+  // For each store, load recent activities (latest 100)
+  const users = (data || []).map(rowToUser);
+  for (const u of users) {
+    const { data: acts } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('store_id', u.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    u.activities = (acts || []).map(a => ({
+      id: a.id,
+      time: new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      sender: a.sender,
+      incoming: a.incoming,
+      reply: a.reply,
+      status: a.status,
+      tokensIn: a.tokens_in,
+      tokensOut: a.tokens_out,
+      cost: parseFloat(a.cost)
+    }));
   }
-  return Object.values(globalThis._coveUsersStore);
+  return users;
 }
 
 export async function getUser(userId) {
   if (!userId) return null;
   const cleanId = userId.trim();
 
-  // 1. Always pull latest from Cloud Database
-  await syncFromCloud();
-  if (globalThis._coveUsersStore[cleanId]) {
-    return globalThis._coveUsersStore[cleanId];
-  }
+  const { data, error } = await supabase
+    .from('stores')
+    .select('*')
+    .eq('id', cleanId)
+    .single();
 
-  // 2. Pull from KV if available
-  const remote = await kvGet(`cove_user_${cleanId}`);
-  if (remote) {
-    globalThis._coveUsersStore[cleanId] = remote;
-    return remote;
-  }
-  return null;
+  if (error || !data) return null;
+  return rowToUser(data);
 }
 
 export async function saveUser(user) {
   if (!user || !user.id) return false;
   const cleanId = user.id.trim();
-  globalThis._coveUsersStore[cleanId] = {
-    ...globalThis._coveUsersStore[cleanId],
-    ...user,
-    lastActive: Date.now()
-  };
+  const row = userToRow(user);
+  delete row.id; // don't update PK
 
-  // Sync to Cloud DB & KV
-  await syncToCloud();
-  await kvSet(`cove_user_${cleanId}`, globalThis._coveUsersStore[cleanId]);
-  await kvSet('cove_all_users', globalThis._coveUsersStore);
-  return true;
-}
+  const { error } = await supabase
+    .from('stores')
+    .update(row)
+    .eq('id', cleanId);
 
-export async function deleteUser(userId) {
-  if (!userId) return false;
-  const cleanId = userId.trim();
-  delete globalThis._coveUsersStore[cleanId];
-  await syncToCloud();
-  await kvSet('cove_all_users', globalThis._coveUsersStore);
+  if (error) { console.error('saveUser error:', error); return false; }
   return true;
 }
 
@@ -187,7 +145,6 @@ export async function createUser(userData) {
     customInputPrice1M: parseFloat(userData.customInputPrice1M) || 0.25,
     customOutputPrice1M: parseFloat(userData.customOutputPrice1M) || 1.50,
     totalRequests: 0,
-    lastActive: Date.now(),
     businessProfile: {
       businessName: userData.storeName?.trim() || userId,
       businessInfo: userData.businessInfo || '',
@@ -209,13 +166,77 @@ export async function createUser(userData) {
       scheduleDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
       outOfHoursMsg: 'Thanks for contacting us! We are currently closed.'
     },
-    blacklist: [],
-    activities: []
+    blacklist: []
   };
 
-  globalThis._coveUsersStore[userId] = newUser;
-  await syncToCloud();
-  await kvSet(`cove_user_${userId}`, newUser);
-  await kvSet('cove_all_users', globalThis._coveUsersStore);
-  return newUser;
+  const row = userToRow(newUser);
+  const { data, error } = await supabase
+    .from('stores')
+    .insert(row)
+    .select()
+    .single();
+
+  if (error) { console.error('createUser error:', error); throw new Error(error.message); }
+  return rowToUser(data);
+}
+
+export async function deleteUser(userId) {
+  if (!userId) return false;
+  const cleanId = userId.trim();
+
+  // Activities cascade-deleted via FK
+  const { error } = await supabase
+    .from('stores')
+    .delete()
+    .eq('id', cleanId);
+
+  if (error) { console.error('deleteUser error:', error); return false; }
+  return true;
+}
+
+// ─── Activity Log Operations ────────────────────────────────
+
+export async function addActivities(storeId, logs) {
+  if (!storeId || !Array.isArray(logs) || logs.length === 0) return;
+
+  const rows = logs.map(l => ({
+    id: String(l.id || `act_${Date.now()}_${Math.random().toString(36).slice(2)}`),
+    store_id: storeId,
+    sender: l.sender || 'Customer',
+    incoming: l.incoming || '',
+    reply: l.reply || '',
+    status: l.status || 'Sent',
+    tokens_in: l.inputTokens || l.tokensIn || 0,
+    tokens_out: l.outputTokens || l.tokensOut || 0,
+    cost: l.cost || 0
+  }));
+
+  // Upsert to avoid duplicate key errors
+  const { error } = await supabase
+    .from('activities')
+    .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+
+  if (error) console.error('addActivities error:', error);
+}
+
+export async function getActivities(storeId, limit = 100) {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) { console.error('getActivities error:', error); return []; }
+  return (data || []).map(a => ({
+    id: a.id,
+    time: new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    sender: a.sender,
+    incoming: a.incoming,
+    reply: a.reply,
+    status: a.status,
+    tokensIn: a.tokens_in,
+    tokensOut: a.tokens_out,
+    cost: parseFloat(a.cost)
+  }));
 }

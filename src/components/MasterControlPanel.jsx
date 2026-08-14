@@ -310,6 +310,14 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast('Store Profile saved and synced!');
   };
 
+  const handleUpdateStoreInfo = (field, value) => {
+    if (!selectedUser) return;
+    const updated = { ...selectedUser, [field]: value };
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
+    syncUserToServer(updated);
+    triggerToast(`Store ${field} updated`);
+  };
+
   const handleSaveSpamSchedule = (spamConfig) => {
     if (!selectedUser) return;
     const updated = { ...selectedUser, spamConfig };
@@ -681,9 +689,29 @@ export default function MasterControlPanel({ onBackToHome }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: '#ffffff' }}>
-                      {selectedUser.storeName || selectedUser.id}
-                    </h2>
+                    <input
+                      type="text"
+                      defaultValue={selectedUser.storeName || selectedUser.id}
+                      onBlur={(e) => {
+                        e.target.style.border = '1px dashed transparent';
+                        e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
+                        handleUpdateStoreInfo('storeName', e.target.value);
+                      }}
+                      onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        margin: 0,
+                        color: '#ffffff',
+                        background: 'transparent',
+                        border: '1px dashed transparent',
+                        borderBottom: '1px dashed rgba(255, 255, 255, 0.2)',
+                        padding: '0 4px',
+                        outline: 'none',
+                        width: 'auto',
+                        minWidth: '150px'
+                      }}
+                    />
                     <span style={{
                       fontSize: '10px',
                       fontWeight: '700',
@@ -695,6 +723,57 @@ export default function MasterControlPanel({ onBackToHome }) {
                     }}>
                       {(selectedUser.balance || 0) <= 0 ? 'PAUSED' : 'ACTIVE'}
                     </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#94a3b8', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Phone:</span>
+                      <input
+                        type="text"
+                        defaultValue={selectedUser.phone || ''}
+                        placeholder="Not set"
+                        onBlur={(e) => {
+                          e.target.style.border = '1px dashed transparent';
+                          e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
+                          handleUpdateStoreInfo('phone', e.target.value);
+                        }}
+                        onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
+                        style={{
+                          background: 'transparent',
+                          border: '1px dashed transparent',
+                          borderBottom: '1px dashed rgba(255, 255, 255, 0.2)',
+                          color: '#94a3b8',
+                          fontSize: '12px',
+                          padding: '0 4px',
+                          outline: 'none',
+                          width: '120px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Address:</span>
+                      <input
+                        type="text"
+                        defaultValue={selectedUser.address || ''}
+                        placeholder="Not set"
+                        onBlur={(e) => {
+                          e.target.style.border = '1px dashed transparent';
+                          e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
+                          handleUpdateStoreInfo('address', e.target.value);
+                        }}
+                        onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
+                        style={{
+                          background: 'transparent',
+                          border: '1px dashed transparent',
+                          borderBottom: '1px dashed rgba(255, 255, 255, 0.2)',
+                          color: '#94a3b8',
+                          fontSize: '12px',
+                          padding: '0 4px',
+                          outline: 'none',
+                          width: '200px'
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#94a3b8', flexWrap: 'wrap' }}>
@@ -830,6 +909,18 @@ export default function MasterControlPanel({ onBackToHome }) {
                     </span>
                   </div>
 
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ background: '#05070b', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      Total Messages: <span style={{ color: '#fff', fontWeight: 'bold' }}>{selectedUser.activities?.length || 0}</span>
+                    </div>
+                    <div style={{ background: '#05070b', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      Total Revenue: <span style={{ color: '#10b981', fontWeight: 'bold' }}>${selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0).toFixed(4) || '0.0000'}</span>
+                    </div>
+                    <div style={{ background: '#05070b', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      Total Tokens: <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{selectedUser.activities?.reduce((sum, a) => sum + (a.tokensIn || 0) + (a.tokensOut || 0), 0) || 0}</span>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {['all', 'sent', 'blocked'].map(f => (
                       <button
@@ -911,6 +1002,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                             <strong style={{ color: '#38bdf8', marginRight: '6px' }}>Cove AI:</strong>
                             {act.reply}
                           </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '10px', color: '#64748b', marginTop: '8px' }}>
+                          <span>In: {act.tokensIn || 0} tokens</span>
+                          <span>Out: {act.tokensOut || 0} tokens</span>
+                          <span>Cost: ${(act.cost || 0.005).toFixed(4)}</span>
                         </div>
                       </div>
                     ))}
@@ -1088,12 +1184,34 @@ export default function MasterControlPanel({ onBackToHome }) {
                   Spam Protection & Hours Schedule
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '14px' }}>
+                  {/* Spam Protection Section */}
                   <div style={{ background: '#05070b', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#38bdf8', marginBottom: '10px' }}>Rate Limits</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '13px', color: '#38bdf8' }}>Spam Protection</div>
+                      <div
+                        onClick={() => handleSaveSpamSchedule({ ...selectedUser.spamConfig, spamEnabled: !selectedUser.spamConfig?.spamEnabled })}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
+                          background: selectedUser.spamConfig?.spamEnabled !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: selectedUser.spamConfig?.spamEnabled !== false ? '#10b981' : '#ef4444',
+                          border: `1px solid ${selectedUser.spamConfig?.spamEnabled !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                        }}
+                      >
+                        {selectedUser.spamConfig?.spamEnabled !== false ? 'ON' : 'OFF'}
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#94a3b8' }}>Cooldown (s):</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedUser.spamConfig?.cooldownEnabled !== false} 
+                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, cooldownEnabled: e.target.checked })} 
+                          />
+                          <span style={{ color: '#94a3b8' }}>Cooldown (s):</span>
+                        </div>
                         <input
                           type="number"
                           defaultValue={selectedUser.spamConfig?.cooldownSeconds || 90}
@@ -1102,7 +1220,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                         />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#94a3b8' }}>Max Replies:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedUser.spamConfig?.maxRepliesEnabled !== false} 
+                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, maxRepliesEnabled: e.target.checked })} 
+                          />
+                          <span style={{ color: '#94a3b8' }}>Max Replies:</span>
+                        </div>
                         <input
                           type="number"
                           defaultValue={selectedUser.spamConfig?.maxReplies || 3}
@@ -1110,28 +1235,107 @@ export default function MasterControlPanel({ onBackToHome }) {
                           style={{ ...cleanInputStyle, width: '60px' }}
                         />
                       </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedUser.spamConfig?.windowEnabled !== false} 
+                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, windowEnabled: e.target.checked })} 
+                          />
+                          <span style={{ color: '#94a3b8' }}>Window (mins):</span>
+                        </div>
+                        <input
+                          type="number"
+                          defaultValue={selectedUser.spamConfig?.windowMinutes || 10}
+                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, windowMinutes: parseInt(e.target.value) || 10 })}
+                          style={{ ...cleanInputStyle, width: '60px' }}
+                        />
+                      </div>
                     </div>
                   </div>
 
+                  {/* Schedule Section */}
                   <div style={{ background: '#05070b', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#38bdf8', marginBottom: '10px' }}>Operating Hours</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '13px', color: '#38bdf8' }}>Operating Hours</div>
+                      <div
+                        onClick={() => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleEnabled: !selectedUser.spamConfig?.scheduleEnabled })}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
+                          background: selectedUser.spamConfig?.scheduleEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: selectedUser.spamConfig?.scheduleEnabled ? '#10b981' : '#ef4444',
+                          border: `1px solid ${selectedUser.spamConfig?.scheduleEnabled ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                        }}
+                      >
+                        {selectedUser.spamConfig?.scheduleEnabled ? 'ON' : 'OFF'}
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#94a3b8' }}>Mode:</span>
+                        <select
+                          value={selectedUser.spamConfig?.scheduleMode || 'ONLY_DURING'}
+                          onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleMode: e.target.value })}
+                          style={{ ...cleanInputStyle, width: '120px' }}
+                        >
+                          <option value="ONLY_DURING">Reply During Hours</option>
+                          <option value="OUTSIDE_ONLY">Reply Outside Hours</option>
+                        </select>
+                      </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: '#94a3b8' }}>Start:</span>
                         <input
-                          type="text"
+                          type="time"
                           defaultValue={selectedUser.spamConfig?.scheduleStart || '09:00'}
                           onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleStart: e.target.value })}
-                          style={{ ...cleanInputStyle, width: '60px' }}
+                          style={{ ...cleanInputStyle, width: '120px' }}
                         />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: '#94a3b8' }}>End:</span>
                         <input
-                          type="text"
+                          type="time"
                           defaultValue={selectedUser.spamConfig?.scheduleEnd || '18:00'}
                           onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleEnd: e.target.value })}
-                          style={{ ...cleanInputStyle, width: '60px' }}
+                          style={{ ...cleanInputStyle, width: '120px' }}
+                        />
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Active Days:</span>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                            const days = selectedUser.spamConfig?.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                            const isSelected = days.includes(day);
+                            return (
+                              <button
+                                key={day}
+                                onClick={() => {
+                                  const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
+                                  handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleDays: newDays });
+                                }}
+                                style={{
+                                  background: isSelected ? '#1d61ff' : 'rgba(255, 255, 255, 0.05)',
+                                  border: 'none',
+                                  color: isSelected ? '#fff' : '#94a3b8',
+                                  borderRadius: '4px',
+                                  padding: '4px 6px',
+                                  fontSize: '10px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Out of Hours Msg:</span>
+                        <textarea
+                          rows={2}
+                          defaultValue={selectedUser.spamConfig?.outOfHoursMsg || 'Thanks for contacting us! We are currently closed.'}
+                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, outOfHoursMsg: e.target.value })}
+                          style={{ ...formInputStyle, resize: 'vertical' }}
                         />
                       </div>
                     </div>
