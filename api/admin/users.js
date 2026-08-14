@@ -54,7 +54,10 @@ export default async function handler(req, res) {
           user = await createUser(data);
         } else {
           user = { ...user, ...data };
-          await saveUser(user, data.oldId);
+          const ok = await saveUser(user, data.oldId);
+          if (!ok) {
+            return res.status(500).json({ error: 'Failed to update store in database' });
+          }
           user = await getUser(data.id || targetId);
         }
         return res.status(200).json({ success: true, user });

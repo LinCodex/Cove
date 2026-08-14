@@ -281,11 +281,16 @@ export default function MasterControlPanel({ onBackToHome }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_user', data: updatedUserData })
       });
-      if (res.ok) {
+      const resData = await res.json().catch(() => ({}));
+      if (res.ok && resData.success !== false) {
         fetchUsers();
+        return true;
       }
+      console.error('Failed to sync to server:', resData.error || res.statusText);
+      return false;
     } catch (e) {
       console.error('Failed to sync to server:', e);
+      return false;
     }
   };
 
