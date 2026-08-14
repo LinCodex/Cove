@@ -125,12 +125,24 @@ export async function saveUser(user, oldId = null) {
 
   if (oldId && oldId.trim() !== newId) {
     // ID rename
+    const existing = await getUser(newId);
+    if (existing && existing.id !== oldId.trim()) {
+      console.error('Cannot rename store: ID already taken:', newId);
+      return false;
+    }
     row.id = newId;
     const { error } = await supabase
       .from('stores')
       .update(row)
       .eq('id', oldId.trim());
-    if (error) { console.error('renameUser error:', error); return false; }
+    if (error) {
+      console.error('renameUser update error, attempting fallback:', error);
+      const { error: insErr } = await supabase.from('stores').insert({ ...row, id: newId });
+      if (insErr) { console.error('insert fallback error:', insErr); return false; }
+      await supabase.from('activities').update({ store_id: newId }).eq('store_id', oldId.trim());
+      await supabase.from('stores').delete().eq('id', oldId.trim());
+      return true;
+    }
     await supabase.from('activities').update({ store_id: newId }).eq('store_id', oldId.trim());
     return true;
   }

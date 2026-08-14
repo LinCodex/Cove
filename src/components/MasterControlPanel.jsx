@@ -101,10 +101,15 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
 
+  // Change Credentials Modal State
+  const [showCredModal, setShowCredModal] = useState(false);
+  const [credUserId, setCredUserId] = useState('');
+  const [credPassword, setCredPassword] = useState('');
+  const [credError, setCredError] = useState('');
+  const [credLoading, setCredLoading] = useState(false);
+
   // Draft States for current store
   const [profileDraft, setProfileDraft] = useState({ 
-    userId: '',
-    password: '',
     storeName: '', 
     phone: '', 
     address: '', 
@@ -137,8 +142,6 @@ export default function MasterControlPanel({ onBackToHome }) {
     const u = users.find(usr => usr.id === selectedUserId);
     if (u) {
       setProfileDraft(prev => editFlags.profile ? prev : { 
-        userId: u.id,
-        password: u.password || '',
         storeName: u.storeName || u.id, 
         phone: u.phone || '', 
         address: u.address || '', 
@@ -442,21 +445,54 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast('Pricing overrides pushed to client APK!');
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveCredentials = async (e) => {
+    e?.preventDefault();
     if (!selectedUser) return;
     const oldId = selectedUser.id;
-    const newId = (profileDraft.userId || selectedUser.id).trim();
-    const newPass = (profileDraft.password || selectedUser.password).trim();
+    const newId = credUserId.trim();
+    const newPass = credPassword.trim();
 
     if (!newId || !newPass) {
-      triggerToast('Error: User ID and Password cannot be empty');
+      setCredError('Store User ID and APK Password cannot be empty');
       return;
     }
 
+    setCredLoading(true);
+    setCredError('');
+
+    try {
+      const updated = {
+        ...selectedUser,
+        id: newId,
+        password: newPass
+      };
+      if (newId !== oldId) {
+        updated.oldId = oldId;
+      }
+
+      const ok = await syncUserToServer(updated);
+      if (!ok) {
+        throw new Error('Failed to update credentials on server');
+      }
+
+      setUsers(prev => prev.map(u => u.id === oldId ? updated : u));
+      if (newId !== oldId) {
+        setSelectedUserId(newId);
+      }
+      setShowCredModal(false);
+      triggerToast('Store credentials updated and synced to APK!');
+      fetchUsers();
+    } catch (err) {
+      setCredError(err.message || 'Failed to save credentials');
+    } finally {
+      setCredLoading(false);
+    }
+  };
+
+  const handleSaveProfile = () => {
+    if (!selectedUser) return;
     const updated = { 
       ...selectedUser, 
-      id: newId,
-      password: newPass,
       storeName: profileDraft.storeName,
       phone: profileDraft.phone,
       address: profileDraft.address,
@@ -468,17 +504,10 @@ export default function MasterControlPanel({ onBackToHome }) {
       }
     };
 
-    if (newId !== oldId) {
-      updated.oldId = oldId;
-    }
-
-    setUsers(prev => prev.map(u => u.id === oldId ? updated : u));
-    if (newId !== oldId) {
-      setSelectedUserId(newId);
-    }
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
     setEditFlags(prev => ({ ...prev, profile: false }));
-    triggerToast('Store Profile & Login Credentials saved and synced!');
+    triggerToast('Store Profile & AI FAQ saved and synced!');
   };
 
   const handleSaveSpamSchedule = () => {
@@ -869,6 +898,31 @@ export default function MasterControlPanel({ onBackToHome }) {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => {
+                    setCredUserId(selectedUser.id);
+                    setCredPassword(selectedUser.password || '');
+                    setCredError('');
+                    setShowCredModal(true);
+                  }}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    color: '#0f172a'
+                  }}
+                >
+                  <Key size={13} color="#0f172a" />
+                  <span>Change Credentials</span>
+                </button>
+
+                <button
+                  onClick={() => {
                     fetchUsers();
                     triggerToast('Syncing store with live database...');
                   }}
@@ -1073,71 +1127,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      Store Profile & Account Credentials
+                      Store Identity & AI FAQ Knowledge
                     </h3>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                      Configure login credentials, store identity, and AI FAQ knowledge.
+                      Configure business profile, services, and FAQ rules for automated customer replies.
                     </p>
                   </div>
                   <button onClick={handleSaveProfile} style={solidPrimaryBtnStyle}>
-                    Save Store Profile & Credentials
+                    Save Store Profile & FAQ
                   </button>
-                </div>
-
-                {/* Store Account Credentials (APK Login) */}
-                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <User size={14} color="#0f172a" />
-                    <span>Store Login Credentials (On-Device APK)</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
-                    <div>
-                      <label style={formLabelStyle}>Store User ID (Login Username)</label>
-                      <input
-                        type="text"
-                        value={profileDraft.userId || ''}
-                        onChange={(e) => {
-                          setEditFlags(prev => ({ ...prev, profile: true }));
-                          setProfileDraft(prev => ({ ...prev, userId: e.target.value }));
-                        }}
-                        placeholder="e.g. store_downtown_01"
-                        style={customInputStyle}
-                      />
-                      <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'block' }}>Account identifier used for APK login</span>
-                    </div>
-
-                    <div>
-                      <label style={formLabelStyle}>APK Password</label>
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <input
-                          type={showPasswordMap['draft_pass'] ? 'text' : 'password'}
-                          value={profileDraft.password || ''}
-                          onChange={(e) => {
-                            setEditFlags(prev => ({ ...prev, profile: true }));
-                            setProfileDraft(prev => ({ ...prev, password: e.target.value }));
-                          }}
-                          placeholder="Password..."
-                          style={{ ...customInputStyle, paddingRight: '40px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswordMap(prev => ({ ...prev, draft_pass: !prev['draft_pass'] }))}
-                          style={{
-                            position: 'absolute',
-                            right: '10px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#94a3b8'
-                          }}
-                        >
-                          {showPasswordMap['draft_pass'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                      <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'block' }}>Store owner password for APK authentication</span>
-                    </div>
-                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
@@ -2232,6 +2230,133 @@ export default function MasterControlPanel({ onBackToHome }) {
                   style={solidPrimaryBtnStyle}
                 >
                   {loading ? 'Creating...' : '+ Create Account'}
+                </button>
+              </div>
+      {/* ─── MODAL: CHANGE STORE CREDENTIALS ─── */}
+      {showCredModal && selectedUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  Change Store Credentials
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                  Update User ID and APK login password for <strong>{selectedUser.storeName || selectedUser.id}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCredModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={formLabelStyle}>Store User ID (Username)</label>
+                <input
+                  type="text"
+                  value={credUserId}
+                  onChange={(e) => setCredUserId(e.target.value)}
+                  style={customInputStyle}
+                  required
+                  autoFocus
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Login username used in the Android APK
+                </span>
+              </div>
+
+              <div>
+                <label style={formLabelStyle}>APK Password</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPasswordMap['cred_modal_pass'] ? 'text' : 'password'}
+                    value={credPassword}
+                    onChange={(e) => setCredPassword(e.target.value)}
+                    style={{ ...customInputStyle, paddingRight: '40px' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordMap(prev => ({ ...prev, cred_modal_pass: !prev['cred_modal_pass'] }))}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94a3b8'
+                    }}
+                  >
+                    {showPasswordMap['cred_modal_pass'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Password used for store authentication
+                </span>
+              </div>
+
+              {credError && (
+                <div style={{
+                  color: '#dc2626',
+                  background: '#fef2f2',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <AlertCircle size={14} />
+                  <span>{credError}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCredModal(false)}
+                  style={{
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={credLoading}
+                  style={{ ...solidPrimaryBtnStyle, padding: '8px 16px' }}
+                >
+                  {credLoading ? 'Saving...' : 'Save & Sync Credentials'}
                 </button>
               </div>
             </form>
