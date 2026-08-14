@@ -83,6 +83,15 @@ const PROVIDER_DEFAULTS = {
   }
 };
 
+const DEFAULT_MODEL_RATES = {
+  GEMINI_25: { name: 'Google Gemini 2.5 Flash-Lite', model: 'gemini-2.5-flash-lite', inPrice: 0.10, outPrice: 0.40 },
+  GEMINI_31: { name: 'Google Gemini 3.1 Flash-Lite', model: 'gemini-3.1-flash-lite', inPrice: 0.25, outPrice: 1.50 },
+  OPENAI: { name: 'OpenAI (ChatGPT)', model: 'gpt-4o-mini', inPrice: 0.15, outPrice: 0.60 },
+  DEEPSEEK: { name: 'DeepSeek', model: 'deepseek-v4-flash', inPrice: 0.14, outPrice: 0.28 },
+  CLAUDE: { name: 'Anthropic Claude', model: 'claude-3-5-haiku-20241022', inPrice: 0.80, outPrice: 4.00 },
+  GROK: { name: 'xAI Grok', model: 'grok-4.1-fast', inPrice: 3.00, outPrice: 15.00 }
+};
+
 export default function MasterControlPanel({ onBackToHome }) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -102,6 +111,19 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [showKeyMap, setShowKeyMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [customBalInput, setCustomBalInput] = useState('10.00');
+
+  // Model Pricing Customizer Modal State
+  const [modelRates, setModelRates] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cove_master_model_rates');
+      return saved ? { ...DEFAULT_MODEL_RATES, ...JSON.parse(saved) } : DEFAULT_MODEL_RATES;
+    } catch {
+      return DEFAULT_MODEL_RATES;
+    }
+  });
+  const [showModelPricingModal, setShowModelPricingModal] = useState(false);
+  const [tempModelRates, setTempModelRates] = useState(null);
+  const [rawUsageFilter, setRawUsageFilter] = useState('all'); // 'all', 'primary', 'backup'
 
   // New User Form State
   const [newUserId, setNewUserId] = useState('');
@@ -491,6 +513,93 @@ export default function MasterControlPanel({ onBackToHome }) {
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
     triggerToast('Pricing overrides pushed to client APK!');
+  };
+
+  const handleOpenPricingModal = () => {
+    setTempModelRates(JSON.parse(JSON.stringify(modelRates)));
+    setShowModelPricingModal(true);
+  };
+
+  const handleSaveModelRates = (e) => {
+    e?.preventDefault();
+    if (!tempModelRates) return;
+    setModelRates(tempModelRates);
+    localStorage.setItem('cove_master_model_rates', JSON.stringify(tempModelRates));
+    setShowModelPricingModal(false);
+    triggerToast('Supplier model pricing updated successfully');
+  };
+
+  const handleResetDefaultModelRates = () => {
+    setTempModelRates(JSON.parse(JSON.stringify(DEFAULT_MODEL_RATES)));
+    setModelRates(DEFAULT_MODEL_RATES);
+    localStorage.removeItem('cove_master_model_rates');
+    triggerToast('Reset to 2026 official default rates');
+  };
+
+  const getModelRateForActivity = (act, user) => {
+    const statusLower = (act.status || '').toLowerCase();
+    const isBackup1 = statusLower.includes('backup 1');
+    const isBackup2 = statusLower.includes('backup 2');
+    const isBackup3 = statusLower.includes('backup 3');
+    const isBackup4 = statusLower.includes('backup 4');
+    const isBackup5 = statusLower.includes('backup 5');
+
+    // 1. If explicit backup slot is recorded
+    if (isBackup1 || isBackup2 || isBackup3 || isBackup4 || isBackup5) {
+      const slotIdx = isBackup1 ? 1 : isBackup2 ? 2 : isBackup3 ? 3 : isBackup4 ? 4 : 5;
+      const slotConfig = user?.aiConfig?.[`backupSlot${slotIdx}`];
+      const slotProv = (slotConfig?.provider || '').toUpperCase();
+      const slotModel = slotConfig?.model || '';
+
+      if (slotProv === 'OPENAI' || statusLower.includes('openai') || statusLower.includes('gpt')) {
+        return { inPrice: modelRates.OPENAI.inPrice, outPrice: modelRates.OPENAI.outPrice, label: `Backup ${slotIdx} • OpenAI (${slotModel || 'gpt-4o-mini'})`, isBackup: true, slotIdx };
+      }
+      if (slotProv === 'DEEPSEEK' || statusLower.includes('deepseek')) {
+        return { inPrice: modelRates.DEEPSEEK.inPrice, outPrice: modelRates.DEEPSEEK.outPrice, label: `Backup ${slotIdx} • DeepSeek (${slotModel || 'deepseek-v4-flash'})`, isBackup: true, slotIdx };
+      }
+      if (slotProv === 'CLAUDE' || statusLower.includes('claude') || statusLower.includes('anthropic')) {
+        return { inPrice: modelRates.CLAUDE.inPrice, outPrice: modelRates.CLAUDE.outPrice, label: `Backup ${slotIdx} • Claude (${slotModel || 'claude-3-5-haiku'})`, isBackup: true, slotIdx };
+      }
+      if (slotProv === 'GROK' || statusLower.includes('grok') || statusLower.includes('xai')) {
+        return { inPrice: modelRates.GROK.inPrice, outPrice: modelRates.GROK.outPrice, label: `Backup ${slotIdx} • Grok (${slotModel || 'grok-4.1-fast'})`, isBackup: true, slotIdx };
+      }
+      if (slotProv === 'GEMINI' || statusLower.includes('gemini')) {
+        const is31 = slotModel.includes('3.1');
+        return is31 
+          ? { inPrice: modelRates.GEMINI_31.inPrice, outPrice: modelRates.GEMINI_31.outPrice, label: `Backup ${slotIdx} • Gemini 3.1 Flash-Lite`, isBackup: true, slotIdx }
+          : { inPrice: modelRates.GEMINI_25.inPrice, outPrice: modelRates.GEMINI_25.outPrice, label: `Backup ${slotIdx} • Gemini 2.5 Flash-Lite`, isBackup: true, slotIdx };
+      }
+      return { inPrice: modelRates.GEMINI_25.inPrice, outPrice: modelRates.GEMINI_25.outPrice, label: `Backup ${slotIdx} AI`, isBackup: true, slotIdx };
+    }
+
+    // 2. If status mentions a specific provider directly
+    if (statusLower.includes('openai') || statusLower.includes('gpt')) {
+      return { inPrice: modelRates.OPENAI.inPrice, outPrice: modelRates.OPENAI.outPrice, label: 'OpenAI (gpt-4o-mini)', isBackup: false };
+    }
+    if (statusLower.includes('deepseek')) {
+      return { inPrice: modelRates.DEEPSEEK.inPrice, outPrice: modelRates.DEEPSEEK.outPrice, label: 'DeepSeek (deepseek-v4-flash)', isBackup: false };
+    }
+    if (statusLower.includes('claude') || statusLower.includes('anthropic')) {
+      return { inPrice: modelRates.CLAUDE.inPrice, outPrice: modelRates.CLAUDE.outPrice, label: 'Claude (claude-3-5-haiku)', isBackup: false };
+    }
+    if (statusLower.includes('grok') || statusLower.includes('xai')) {
+      return { inPrice: modelRates.GROK.inPrice, outPrice: modelRates.GROK.outPrice, label: 'Grok (grok-4.1-fast)', isBackup: false };
+    }
+
+    // 3. Fallback to store's Primary AI Model configuration
+    const primProv = (user?.aiConfig?.provider || 'GEMINI').toUpperCase();
+    const primModel = user?.aiConfig?.model || '';
+
+    if (primProv === 'OPENAI') return { inPrice: modelRates.OPENAI.inPrice, outPrice: modelRates.OPENAI.outPrice, label: `Primary • OpenAI (${primModel || 'gpt-4o-mini'})`, isBackup: false };
+    if (primProv === 'DEEPSEEK') return { inPrice: modelRates.DEEPSEEK.inPrice, outPrice: modelRates.DEEPSEEK.outPrice, label: `Primary • DeepSeek (${primModel || 'deepseek-v4-flash'})`, isBackup: false };
+    if (primProv === 'CLAUDE') return { inPrice: modelRates.CLAUDE.inPrice, outPrice: modelRates.CLAUDE.outPrice, label: `Primary • Claude (${primModel || 'claude-3-5-haiku'})`, isBackup: false };
+    if (primProv === 'GROK') return { inPrice: modelRates.GROK.inPrice, outPrice: modelRates.GROK.outPrice, label: `Primary • Grok (${primModel || 'grok-4.1-fast'})`, isBackup: false };
+
+    // Default: Gemini
+    if (primModel.includes('3.1')) {
+      return { inPrice: modelRates.GEMINI_31.inPrice, outPrice: modelRates.GEMINI_31.outPrice, label: 'Primary • Gemini 3.1 Flash-Lite', isBackup: false };
+    }
+    return { inPrice: modelRates.GEMINI_25.inPrice, outPrice: modelRates.GEMINI_25.outPrice, label: 'Primary • Gemini 2.5 Flash-Lite', isBackup: false };
   };
 
   const handleSaveCredentials = async (e) => {
@@ -2222,39 +2331,54 @@ export default function MasterControlPanel({ onBackToHome }) {
 
             {/* ─── TAB 5: PRICING & TOKEN RATES ─── */}
             {activeTab === 'pricing' && (() => {
-              const activeProvKey = selectedUser?.aiConfig?.provider || 'GEMINI';
-              const activeProvInfo = PROVIDER_DEFAULTS[activeProvKey] || PROVIDER_DEFAULTS.GEMINI;
-              const activeModelName = selectedUser?.aiConfig?.model || activeProvInfo.model;
-              const isGemini31 = activeProvKey === 'GEMINI' && activeModelName.includes('3.1');
-
-              const totalUserRequests = selectedUser?.activities?.length || selectedUser?.totalRequests || 0;
-              const totalTokensIn = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensIn) || 0), 0);
-              const totalTokensOut = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensOut) || 0), 0);
+              const activities = selectedUser?.activities || [];
+              const totalUserRequests = activities.length || selectedUser?.totalRequests || 0;
+              const totalTokensIn = activities.reduce((sum, a) => sum + (parseInt(a.tokensIn) || 0), 0);
+              const totalTokensOut = activities.reduce((sum, a) => sum + (parseInt(a.tokensOut) || 0), 0);
               const totalTokens = totalTokensIn + totalTokensOut;
 
-              const rawInputPrice = activeProvKey === 'GEMINI' ? (isGemini31 ? 0.25 : 0.10) : (activeProvInfo.inputPrice1M || 0.10);
-              const rawOutputPrice = activeProvKey === 'GEMINI' ? (isGemini31 ? 1.50 : 0.40) : (activeProvInfo.outputPrice1M || 0.40);
-              const rawInputCost = (totalTokensIn / 1000000) * rawInputPrice;
-              const rawOutputCost = (totalTokensOut / 1000000) * rawOutputPrice;
-              const actualRawTotalCost = rawInputCost + rawOutputCost;
-              const avgRawCostPerMsg = totalUserRequests > 0 ? (actualRawTotalCost / totalUserRequests) : 0;
+              // Compute exact multi-model raw cost by calculating each message against the specific model that replied
+              let totalActualRawCost = 0;
+              let primaryCount = 0;
+              let backupCount = 0;
 
-              const totalCustomerBilled = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
-              const netMargin = totalCustomerBilled - actualRawTotalCost;
+              const enrichedActivities = activities.map(act => {
+                const rateInfo = getModelRateForActivity(act, selectedUser);
+                const inT = parseInt(act.tokensIn) || 0;
+                const outT = parseInt(act.tokensOut) || 0;
+                const rawMsgCost = ((inT / 1000000) * rateInfo.inPrice) + ((outT / 1000000) * rateInfo.outPrice);
+                const billedCost = parseFloat(act.cost) || 0;
+                const margin = billedCost - rawMsgCost;
+
+                if (rateInfo.isBackup) backupCount++; else primaryCount++;
+                totalActualRawCost += rawMsgCost;
+
+                return {
+                  ...act,
+                  rateInfo,
+                  inT,
+                  outT,
+                  totalT: inT + outT,
+                  rawMsgCost,
+                  billedCost,
+                  margin
+                };
+              });
+
+              const avgRawCostPerMsg = totalUserRequests > 0 ? (totalActualRawCost / totalUserRequests) : 0;
+              const totalCustomerBilled = activities.reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
+              const netMargin = totalCustomerBilled - totalActualRawCost;
               const marginPercent = totalCustomerBilled > 0 ? ((netMargin / totalCustomerBilled) * 100).toFixed(1) : '0.0';
 
-              const benchmarkList = [
-                { name: 'Google Gemini 2.5 Flash-Lite', model: 'gemini-2.5-flash-lite', inPrice: 0.10, outPrice: 0.40, provKey: 'GEMINI', isMatch: activeProvKey === 'GEMINI' && !isGemini31 },
-                { name: 'Google Gemini 3.1 Flash-Lite', model: 'gemini-3.1-flash-lite', inPrice: 0.25, outPrice: 1.50, provKey: 'GEMINI', isMatch: activeProvKey === 'GEMINI' && isGemini31 },
-                { name: 'DeepSeek', model: 'deepseek-v4-flash', inPrice: 0.14, outPrice: 0.28, provKey: 'DEEPSEEK', isMatch: activeProvKey === 'DEEPSEEK' },
-                { name: 'OpenAI (ChatGPT)', model: 'gpt-4o-mini', inPrice: 0.15, outPrice: 0.60, provKey: 'OPENAI', isMatch: activeProvKey === 'OPENAI' },
-                { name: 'Anthropic Claude', model: 'claude-3-5-haiku-20241022', inPrice: 0.80, outPrice: 4.00, provKey: 'CLAUDE', isMatch: activeProvKey === 'CLAUDE' },
-                { name: 'xAI Grok', model: 'grok-4.1-fast', inPrice: 3.00, outPrice: 15.00, provKey: 'GROK', isMatch: activeProvKey === 'GROK' }
-              ];
+              const filteredRawActivities = enrichedActivities.filter(a => {
+                if (rawUsageFilter === 'primary') return !a.rateInfo.isBackup;
+                if (rawUsageFilter === 'backup') return a.rateInfo.isBackup;
+                return true;
+              });
 
               return (
                 <div style={cardSectionStyle}>
-                  {/* Section 1: Pricing Modes */}
+                  {/* Section 1: Customer Retail Pricing Mode */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
@@ -2353,35 +2477,46 @@ export default function MasterControlPanel({ onBackToHome }) {
                         Zero markup • Direct supplier cost.
                       </div>
                       <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
-                        {activeProvInfo.name} (${rawInputPrice} / ${rawOutputPrice})
+                        Gemini 2.5 Flash-Lite (${modelRates.GEMINI_25.inPrice} / ${modelRates.GEMINI_25.outPrice})
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 2: Actual Raw API Usage & Cost Analytics */}
+                  {/* Section 2: Actual Raw API Usage & Multi-Model Real Cost */}
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                            Actual Raw API Usage & True Provider Cost
+                            Actual Raw API Usage & Multi-Model Real Cost
                           </h3>
-                          <span style={{
-                            background: '#eff6ff',
-                            color: '#1d4ed8',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #bfdbfe'
-                          }}>
-                            {activeProvInfo.name} ({activeModelName})
-                          </span>
                         </div>
                         <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                          Live breakdown of raw token consumption and actual API billing based on the active AI model.
+                          Accurately accounts for Primary and Backup AI keys/models used during fallbacks.
                         </p>
                       </div>
+
+                      {/* Button to open Model Pricing Editor Popup */}
+                      <button
+                        onClick={handleOpenPricingModal}
+                        style={{
+                          background: '#ffffff',
+                          border: '1.5px solid #cbd5e1',
+                          color: '#0f172a',
+                          borderRadius: '8px',
+                          padding: '7px 14px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        <Settings size={14} color="#1d4ed8" />
+                        <span>Update Model Pricing Rates</span>
+                      </button>
                     </div>
 
                     {/* 4 Analytics KPI Cards */}
@@ -2394,7 +2529,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           {totalUserRequests.toLocaleString()}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          SMS reply executions
+                          {primaryCount} primary • {backupCount} backup fallbacks
                         </span>
                       </div>
 
@@ -2415,10 +2550,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                           Actual Raw API Cost
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: '800', color: '#dc2626' }}>
-                          ${actualRawTotalCost.toFixed(5)}
+                          ${totalActualRawCost.toFixed(5)}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          ${rawInputPrice}/1M in • ${rawOutputPrice}/1M out
+                          Calculated across all executed models
                         </span>
                       </div>
 
@@ -2430,7 +2565,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           ${avgRawCostPerMsg.toFixed(5)}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          Real API expense per SMS
+                          Blended average per message
                         </span>
                       </div>
                     </div>
@@ -2445,14 +2580,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       flexWrap: 'wrap',
-                      gap: '14px'
+                      gap: '14px',
+                      marginBottom: '20px'
                     }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
                           Customer Billed vs Raw Supplier API Cost
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          Total Customer Spend: <strong style={{ color: '#0f172a' }}>${totalCustomerBilled.toFixed(4)}</strong> • Actual API Cost: <strong style={{ color: '#dc2626' }}>${actualRawTotalCost.toFixed(5)}</strong>
+                          Total Customer Spend: <strong style={{ color: '#0f172a' }}>${totalCustomerBilled.toFixed(4)}</strong> • Actual API Cost: <strong style={{ color: '#dc2626' }}>${totalActualRawCost.toFixed(5)}</strong>
                         </div>
                       </div>
 
@@ -2471,72 +2607,111 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Section 3: 2026 AI Model Real-Time Pricing Reference Benchmark */}
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
-                      Official Provider Real-Time Model Pricing Benchmark (2026)
-                    </h3>
-                    <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px 0' }}>
-                      Official raw provider token costs and estimated cost for 1,000 SMS auto-replies (~80 prompt tokens, ~35 output tokens).
-                    </p>
+                    {/* Section 3: Per-Message Token Usage & Cost History Log */}
+                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '18px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                          <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                            Token Usage & Raw Cost History Log ({filteredRawActivities.length})
+                          </h4>
+                          <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' }}>
+                            Per-reply breakdown showing exact tokens and cost for the specific model that replied.
+                          </p>
+                        </div>
 
-                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '550px' }}>
-                        <thead>
-                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
-                            <th style={{ padding: '10px 14px' }}>Provider</th>
-                            <th style={{ padding: '10px 14px' }}>Model</th>
-                            <th style={{ padding: '10px 14px' }}>Input Price / 1M</th>
-                            <th style={{ padding: '10px 14px' }}>Output Price / 1M</th>
-                            <th style={{ padding: '10px 14px' }}>Est. Cost / 1k Msgs</th>
-                            <th style={{ padding: '10px 14px' }}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {benchmarkList.map((item, bIdx) => {
-                            const est1kCost = ((80000 / 1000000) * item.inPrice) + ((35000 / 1000000) * item.outPrice);
-                            return (
-                              <tr key={bIdx} style={{ borderBottom: '1px solid #f1f5f9', background: item.isMatch ? '#f0fdf4' : '#ffffff' }}>
-                                <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
-                                  {item.name}
-                                </td>
-                                <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#475569' }}>
-                                  {item.model}
-                                </td>
-                                <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
-                                  ${item.inPrice.toFixed(3)}
-                                </td>
-                                <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
-                                  ${item.outPrice.toFixed(3)}
-                                </td>
-                                <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
-                                  ${est1kCost.toFixed(4)}
-                                </td>
-                                <td style={{ padding: '10px 14px' }}>
-                                  {item.isMatch ? (
-                                    <span style={{
-                                      background: '#ecfdf5',
-                                      color: '#059669',
-                                      fontSize: '10px',
-                                      fontWeight: '800',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      border: '1px solid #a7f3d0'
-                                    }}>
-                                      ACTIVE STORE MODEL
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: '#94a3b8', fontSize: '11px' }}>Available</span>
-                                  )}
+                        {/* Filter Tabs */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {[
+                            { key: 'all', label: `All (${enrichedActivities.length})` },
+                            { key: 'primary', label: `Primary AI (${primaryCount})` },
+                            { key: 'backup', label: `Backup AI (${backupCount})` }
+                          ].map(tab => (
+                            <button
+                              key={tab.key}
+                              onClick={() => setRawUsageFilter(tab.key)}
+                              style={{
+                                background: rawUsageFilter === tab.key ? '#0f172a' : '#f8fafc',
+                                color: rawUsageFilter === tab.key ? '#ffffff' : '#64748b',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '650px' }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
+                              <th style={{ padding: '10px 14px' }}>Time</th>
+                              <th style={{ padding: '10px 14px' }}>Sender</th>
+                              <th style={{ padding: '10px 14px' }}>Model / Engine Used</th>
+                              <th style={{ padding: '10px 14px' }}>Tokens (In / Out)</th>
+                              <th style={{ padding: '10px 14px' }}>Raw Supplier Cost</th>
+                              <th style={{ padding: '10px 14px' }}>Customer Billed</th>
+                              <th style={{ padding: '10px 14px' }}>Gross Margin</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRawActivities.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                  No message executions found for this filter.
                                 </td>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                            ) : (
+                              filteredRawActivities.map((act, i) => (
+                                <tr key={act.id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                    {act.time || 'Just now'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                    {act.sender}
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      padding: '2px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      background: act.rateInfo.isBackup ? '#eff6ff' : '#ecfdf5',
+                                      color: act.rateInfo.isBackup ? '#1d4ed8' : '#059669',
+                                      border: `1px solid ${act.rateInfo.isBackup ? '#bfdbfe' : '#a7f3d0'}`
+                                    }}>
+                                      {act.rateInfo.label}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: '#0f172a', fontWeight: '600' }}>
+                                    <span>{act.inT} in</span> • <span>{act.outT} out</span> <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: '700', color: '#dc2626' }}>
+                                    ${act.rawMsgCost.toFixed(6)}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                    ${act.billedCost.toFixed(4)}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: '700', color: act.margin >= 0 ? '#059669' : '#dc2626' }}>
+                                    {act.margin >= 0 ? `+$${act.margin.toFixed(4)}` : `-$${Math.abs(act.margin).toFixed(4)}`}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
+
                   </div>
                 </div>
               );
@@ -2868,6 +3043,164 @@ export default function MasterControlPanel({ onBackToHome }) {
                 >
                   {credLoading ? 'Saving...' : 'Save & Sync Credentials'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: UPDATE SUPPLIER MODEL PRICING ─── */}
+      {showModelPricingModal && tempModelRates && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '620px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Settings size={18} color="#1d4ed8" />
+                  Update Supplier AI Model Pricing
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
+                  Customize raw supplier rates (in USD per 1,000,000 tokens). Live SMS analytics update automatically.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowModelPricingModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveModelRates} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {Object.keys(tempModelRates).map(mKey => {
+                  const m = tempModelRates[mKey];
+                  return (
+                    <div key={mKey} style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '10px'
+                    }}>
+                      <div style={{ minWidth: '180px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{m.name}</div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>{m.model}</div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                            Input ($/1M)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={m.inPrice}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setTempModelRates(prev => ({
+                                ...prev,
+                                [mKey]: { ...prev[mKey], inPrice: val }
+                              }));
+                            }}
+                            style={{ ...customInputStyle, width: '90px', padding: '6px 8px', fontSize: '12px' }}
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                            Output ($/1M)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={m.outPrice}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setTempModelRates(prev => ({
+                                ...prev,
+                                [mKey]: { ...prev[mKey], outPrice: val }
+                              }));
+                            }}
+                            style={{ ...customInputStyle, width: '90px', padding: '6px 8px', fontSize: '12px' }}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleResetDefaultModelRates}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#64748b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ↺ Reset 2026 Defaults
+                </button>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelPricingModal(false)}
+                    style={{
+                      background: '#f1f5f9',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ ...solidPrimaryBtnStyle, padding: '8px 18px' }}
+                  >
+                    Save Custom Pricing Rates
+                  </button>
+                </div>
               </div>
             </form>
           </div>
