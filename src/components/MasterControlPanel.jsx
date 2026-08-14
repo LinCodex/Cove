@@ -43,33 +43,43 @@ import {
 const PROVIDER_DEFAULTS = {
   GEMINI: {
     name: 'Google Gemini',
-    model: 'gemini-3.1-flash-lite',
+    model: 'gemini-2.5-flash-lite',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    placeholder: 'AIzaSy...'
+    placeholder: 'AIzaSy...',
+    inputPrice1M: 0.075,
+    outputPrice1M: 0.30
   },
   OPENAI: {
     name: 'OpenAI (ChatGPT)',
     model: 'gpt-4o-mini',
     baseUrl: 'https://api.openai.com/v1',
-    placeholder: 'sk-proj-...'
-  },
-  GROK: {
-    name: 'xAI Grok',
-    model: 'grok-4.1-fast',
-    baseUrl: 'https://api.x.ai/v1',
-    placeholder: 'xai-...'
+    placeholder: 'sk-proj-...',
+    inputPrice1M: 0.15,
+    outputPrice1M: 0.60
   },
   DEEPSEEK: {
     name: 'DeepSeek',
     model: 'deepseek-v4-flash',
     baseUrl: 'https://api.deepseek.com',
-    placeholder: 'sk-...'
+    placeholder: 'sk-...',
+    inputPrice1M: 0.14,
+    outputPrice1M: 0.28
   },
   CLAUDE: {
     name: 'Anthropic Claude',
     model: 'claude-3-5-haiku-20241022',
     baseUrl: 'https://api.anthropic.com/v1',
-    placeholder: 'sk-ant-...'
+    placeholder: 'sk-ant-...',
+    inputPrice1M: 0.80,
+    outputPrice1M: 4.00
+  },
+  GROK: {
+    name: 'xAI Grok',
+    model: 'grok-4.1-fast',
+    baseUrl: 'https://api.x.ai/v1',
+    placeholder: 'xai-...',
+    inputPrice1M: 3.00,
+    outputPrice1M: 15.00
   }
 };
 
@@ -2211,105 +2221,318 @@ export default function MasterControlPanel({ onBackToHome }) {
             )}
 
             {/* ─── TAB 5: PRICING & TOKEN RATES ─── */}
-            {activeTab === 'pricing' && (
-              <div style={cardSectionStyle}>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
-                  Store Pricing Mode
-                </h3>
+            {activeTab === 'pricing' && (() => {
+              const activeProvKey = selectedUser?.aiConfig?.provider || 'GEMINI';
+              const activeProvInfo = PROVIDER_DEFAULTS[activeProvKey] || PROVIDER_DEFAULTS.GEMINI;
+              const activeModelName = selectedUser?.aiConfig?.model || activeProvInfo.model;
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-                  <div
-                    onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                    style={{
-                      background: selectedUser.pricingMode === 'fixed_fee' ? '#ffffff' : '#f8fafc',
-                      border: selectedUser.pricingMode === 'fixed_fee' ? '2px solid #0f172a' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                      Fixed Flat Fee
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Deduct a fixed dollar rate per auto-reply.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '700' }}>$</span>
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={selectedUser.fixedFeePerMessage || 0.005}
-                        onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                        style={{ ...customInputStyle, width: '90px' }}
-                      />
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>/ msg</span>
+              const totalUserRequests = selectedUser?.activities?.length || selectedUser?.totalRequests || 0;
+              const totalTokensIn = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensIn) || 0), 0);
+              const totalTokensOut = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseInt(a.tokensOut) || 0), 0);
+              const totalTokens = totalTokensIn + totalTokensOut;
+
+              const rawInputPrice = activeProvInfo.inputPrice1M || 0.075;
+              const rawOutputPrice = activeProvInfo.outputPrice1M || 0.30;
+              const rawInputCost = (totalTokensIn / 1000000) * rawInputPrice;
+              const rawOutputCost = (totalTokensOut / 1000000) * rawOutputPrice;
+              const actualRawTotalCost = rawInputCost + rawOutputCost;
+              const avgRawCostPerMsg = totalUserRequests > 0 ? (actualRawTotalCost / totalUserRequests) : 0;
+
+              const totalCustomerBilled = (selectedUser?.activities || []).reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
+              const netMargin = totalCustomerBilled - actualRawTotalCost;
+              const marginPercent = totalCustomerBilled > 0 ? ((netMargin / totalCustomerBilled) * 100).toFixed(1) : '0.0';
+
+              return (
+                <div style={cardSectionStyle}>
+                  {/* Section 1: Pricing Modes */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        Customer Retail Pricing Mode
+                      </h3>
+                      <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                        Choose how this store's balance is charged per automated customer SMS reply.
+                      </p>
                     </div>
                   </div>
 
-                  <div
-                    onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
-                    style={{
-                      background: selectedUser.pricingMode === 'token_custom' ? '#ffffff' : '#f8fafc',
-                      border: selectedUser.pricingMode === 'token_custom' ? '2px solid #0f172a' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                      Custom Token Rates
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Bill actual prompt and reply token usage.
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>In $/1M:</span>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={selectedUser.customInputPrice1M || 0.25}
-                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
-                          style={{ ...customInputStyle, width: '80px' }}
-                        />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                    <div
+                      onClick={() => handleUpdatePricing('fixed_fee', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                      style={{
+                        background: selectedUser.pricingMode === 'fixed_fee' ? '#ffffff' : '#f8fafc',
+                        border: selectedUser.pricingMode === 'fixed_fee' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                        Fixed Flat Fee
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>Out $/1M:</span>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                        Deduct a fixed dollar rate per auto-reply.
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700' }}>$</span>
                         <input
                           type="number"
-                          step="0.10"
-                          value={selectedUser.customOutputPrice1M || 1.50}
-                          onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
-                          style={{ ...customInputStyle, width: '80px' }}
+                          step="0.001"
+                          value={selectedUser.fixedFeePerMessage || 0.005}
+                          onChange={(e) => handleUpdatePricing('fixed_fee', e.target.value, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                          style={{ ...customInputStyle, width: '90px' }}
                         />
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>/ msg</span>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, selectedUser.customOutputPrice1M)}
+                      style={{
+                        background: selectedUser.pricingMode === 'token_custom' ? '#ffffff' : '#f8fafc',
+                        border: selectedUser.pricingMode === 'token_custom' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                        Custom Token Rates
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                        Bill prompt and reply token markup.
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748b' }}>In $/1M:</span>
+                          <input
+                            type="number"
+                            step="0.05"
+                            value={selectedUser.customInputPrice1M || 0.25}
+                            onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, e.target.value, selectedUser.customOutputPrice1M)}
+                            style={{ ...customInputStyle, width: '80px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748b' }}>Out $/1M:</span>
+                          <input
+                            type="number"
+                            step="0.10"
+                            value={selectedUser.customOutputPrice1M || 1.50}
+                            onChange={(e) => handleUpdatePricing('token_custom', selectedUser.fixedFeePerMessage, selectedUser.customInputPrice1M, e.target.value)}
+                            style={{ ...customInputStyle, width: '80px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
+                      style={{
+                        background: selectedUser.pricingMode === 'default_ai' ? '#ffffff' : '#f8fafc',
+                        border: selectedUser.pricingMode === 'default_ai' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                        Direct AI Pass-Through
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
+                        Zero markup • Direct supplier cost.
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
+                        {activeProvInfo.name} (${rawInputPrice} / ${rawOutputPrice})
                       </div>
                     </div>
                   </div>
 
-                  <div
-                    onClick={() => handleUpdatePricing('default_ai', 0, 0, 0)}
-                    style={{
-                      background: selectedUser.pricingMode === 'default_ai' ? '#ffffff' : '#f8fafc',
-                      border: selectedUser.pricingMode === 'default_ai' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                  {/* Section 2: Actual Raw API Usage & Cost Analytics */}
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                            Actual Raw API Usage & True Provider Cost
+                          </h3>
+                          <span style={{
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #bfdbfe'
+                          }}>
+                            {activeProvInfo.name} ({activeModelName})
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                          Live breakdown of raw token consumption and actual API billing based on the active AI model.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 4 Analytics KPI Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Total API Requests
+                        </div>
+                        <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
+                          {totalUserRequests.toLocaleString()}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          SMS reply executions
+                        </span>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Total Token Volume
+                        </div>
+                        <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
+                          {totalTokens.toLocaleString()}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          {totalTokensIn.toLocaleString()} in • {totalTokensOut.toLocaleString()} out
+                        </span>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Actual Raw API Cost
+                        </div>
+                        <div style={{ fontSize: '22px', fontWeight: '800', color: '#dc2626' }}>
+                          ${actualRawTotalCost.toFixed(5)}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          ${rawInputPrice}/1M in • ${rawOutputPrice}/1M out
+                        </span>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Est. Raw Cost / Message
+                        </div>
+                        <div style={{ fontSize: '22px', fontWeight: '800', color: '#059669' }}>
+                          ${avgRawCostPerMsg.toFixed(5)}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          Real API expense per SMS
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Economics & Gross Spread Banner */}
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '12px',
                       padding: '16px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                      Direct AI Pass-Through
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '14px'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                          Customer Billed vs Raw Supplier API Cost
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                          Total Customer Spend: <strong style={{ color: '#0f172a' }}>${totalCustomerBilled.toFixed(4)}</strong> • Actual API Cost: <strong style={{ color: '#dc2626' }}>${actualRawTotalCost.toFixed(5)}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: netMargin >= 0 ? '#ecfdf5' : '#fef2f2',
+                        border: `1px solid ${netMargin >= 0 ? '#a7f3d0' : '#fecaca'}`,
+                        padding: '8px 14px',
+                        borderRadius: '8px'
+                      }}>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Gross Margin:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: netMargin >= 0 ? '#059669' : '#dc2626' }}>
+                          {netMargin >= 0 ? `+$${netMargin.toFixed(4)} (+${marginPercent}%)` : `-$${Math.abs(netMargin).toFixed(4)} (${marginPercent}%)`}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>
-                      Standard supplier token rate.
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
-                      Gemini 3.1 Flash Lite ($0.25 / $1.50)
+                  </div>
+
+                  {/* Section 3: 2026 AI Model Real-Time Pricing Reference Benchmark */}
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
+                      Official Provider Real-Time Model Pricing Benchmark (2026)
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px 0' }}>
+                      Official raw provider token costs and estimated cost for 1,000 SMS auto-replies (~80 prompt tokens, ~35 output tokens).
+                    </p>
+
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '550px' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
+                            <th style={{ padding: '10px 14px' }}>Provider</th>
+                            <th style={{ padding: '10px 14px' }}>Model</th>
+                            <th style={{ padding: '10px 14px' }}>Input Price / 1M</th>
+                            <th style={{ padding: '10px 14px' }}>Output Price / 1M</th>
+                            <th style={{ padding: '10px 14px' }}>Est. Cost / 1k Msgs</th>
+                            <th style={{ padding: '10px 14px' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.keys(PROVIDER_DEFAULTS).map((provKey) => {
+                            const p = PROVIDER_DEFAULTS[provKey];
+                            const isCurrent = activeProvKey === provKey;
+                            const est1kCost = ((80000 / 1000000) * p.inputPrice1M) + ((35000 / 1000000) * p.outputPrice1M);
+                            return (
+                              <tr key={provKey} style={{ borderBottom: '1px solid #f1f5f9', background: isCurrent ? '#f0fdf4' : '#ffffff' }}>
+                                <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                  {p.name}
+                                </td>
+                                <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#475569' }}>
+                                  {p.model}
+                                </td>
+                                <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
+                                  ${p.inputPrice1M.toFixed(3)}
+                                </td>
+                                <td style={{ padding: '10px 14px', color: '#059669', fontWeight: '600' }}>
+                                  ${p.outputPrice1M.toFixed(3)}
+                                </td>
+                                <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                  ${est1kCost.toFixed(4)}
+                                </td>
+                                <td style={{ padding: '10px 14px' }}>
+                                  {isCurrent ? (
+                                    <span style={{
+                                      background: '#ecfdf5',
+                                      color: '#059669',
+                                      fontSize: '10px',
+                                      fontWeight: '800',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      border: '1px solid #a7f3d0'
+                                    }}>
+                                      ACTIVE STORE MODEL
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#94a3b8', fontSize: '11px' }}>Available</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* ─── TAB 6: MANUAL REPLY LIST ─── */}
             {activeTab === 'blacklist' && (
