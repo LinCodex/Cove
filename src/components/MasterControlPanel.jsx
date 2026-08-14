@@ -47,6 +47,48 @@ export default function MasterControlPanel({ onBackToHome }) {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
 
+  // Draft States for editing
+  const [storeInfoDraft, setStoreInfoDraft] = useState({ storeName: '', phone: '', address: '' });
+  const [profileDraft, setProfileDraft] = useState({ businessName: '', businessInfo: '', replyTone: '', aiRules: '' });
+  const [spamDraft, setSpamDraft] = useState({});
+  const [editFlags, setEditFlags] = useState({ storeInfo: false, profile: false, spam: false });
+
+  useEffect(() => {
+    setEditFlags({ storeInfo: false, profile: false, spam: false });
+  }, [selectedUserId]);
+
+  useEffect(() => {
+    const u = users.find(usr => usr.id === selectedUserId);
+    if (u) {
+      setStoreInfoDraft(prev => editFlags.storeInfo ? prev : { 
+        storeName: u.storeName || u.id, 
+        phone: u.phone || '', 
+        address: u.address || '' 
+      });
+      setProfileDraft(prev => editFlags.profile ? prev : { 
+        businessName: u.businessProfile?.businessName || u.storeName || '', 
+        businessInfo: u.businessProfile?.businessInfo || '', 
+        replyTone: u.businessProfile?.replyTone || 'Professional, friendly, and concise', 
+        aiRules: u.businessProfile?.aiRules || '' 
+      });
+      setSpamDraft(prev => editFlags.spam ? prev : { 
+        spamEnabled: u.spamConfig?.spamEnabled ?? true,
+        cooldownEnabled: u.spamConfig?.cooldownEnabled ?? true,
+        cooldownSeconds: u.spamConfig?.cooldownSeconds ?? 90,
+        maxRepliesEnabled: u.spamConfig?.maxRepliesEnabled ?? true,
+        maxReplies: u.spamConfig?.maxReplies ?? 3,
+        windowEnabled: u.spamConfig?.windowEnabled ?? true,
+        windowMinutes: u.spamConfig?.windowMinutes ?? 10,
+        scheduleEnabled: u.spamConfig?.scheduleEnabled ?? false,
+        scheduleMode: u.spamConfig?.scheduleMode || 'ONLY_DURING',
+        scheduleStart: u.spamConfig?.scheduleStart || '09:00',
+        scheduleEnd: u.spamConfig?.scheduleEnd || '18:00',
+        scheduleDays: u.spamConfig?.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        outOfHoursMsg: u.spamConfig?.outOfHoursMsg || 'Thanks for contacting us! We are currently closed.'
+      });
+    }
+  }, [selectedUserId, users, editFlags]);
+
   // Handle Master Admin Login
   const handleAdminAuth = async (e) => {
     e.preventDefault();
@@ -302,27 +344,30 @@ export default function MasterControlPanel({ onBackToHome }) {
     triggerToast('Pricing overrides pushed to client APK!');
   };
 
-  const handleSaveProfile = (profile) => {
+  const handleSaveProfile = () => {
     if (!selectedUser) return;
-    const updated = { ...selectedUser, businessProfile: profile };
+    const updated = { ...selectedUser, businessProfile: profileDraft };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
+    setEditFlags(prev => ({ ...prev, profile: false }));
     triggerToast('Store Profile saved and synced!');
   };
 
-  const handleUpdateStoreInfo = (field, value) => {
+  const handleSaveStoreInfo = () => {
     if (!selectedUser) return;
-    const updated = { ...selectedUser, [field]: value };
+    const updated = { ...selectedUser, ...storeInfoDraft };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
-    triggerToast(`Store ${field} updated`);
+    setEditFlags(prev => ({ ...prev, storeInfo: false }));
+    triggerToast(`Store info updated`);
   };
 
-  const handleSaveSpamSchedule = (spamConfig) => {
+  const handleSaveSpamSchedule = () => {
     if (!selectedUser) return;
-    const updated = { ...selectedUser, spamConfig };
+    const updated = { ...selectedUser, spamConfig: spamDraft };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updated : u));
     syncUserToServer(updated);
+    setEditFlags(prev => ({ ...prev, spam: false }));
     triggerToast('Spam & Schedule rules synced!');
   };
 
@@ -691,11 +736,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <input
                       type="text"
-                      defaultValue={selectedUser.storeName || selectedUser.id}
+                      value={storeInfoDraft.storeName || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, storeInfo: true }));
+                        setStoreInfoDraft(prev => ({ ...prev, storeName: e.target.value }));
+                      }}
                       onBlur={(e) => {
                         e.target.style.border = '1px dashed transparent';
                         e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
-                        handleUpdateStoreInfo('storeName', e.target.value);
                       }}
                       onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
                       style={{
@@ -730,12 +778,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <span style={{ color: '#64748b' }}>Phone:</span>
                       <input
                         type="text"
-                        defaultValue={selectedUser.phone || ''}
+                        value={storeInfoDraft.phone || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, storeInfo: true }));
+                          setStoreInfoDraft(prev => ({ ...prev, phone: e.target.value }));
+                        }}
                         placeholder="Not set"
                         onBlur={(e) => {
                           e.target.style.border = '1px dashed transparent';
                           e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
-                          handleUpdateStoreInfo('phone', e.target.value);
                         }}
                         onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
                         style={{
@@ -754,12 +805,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <span style={{ color: '#64748b' }}>Address:</span>
                       <input
                         type="text"
-                        defaultValue={selectedUser.address || ''}
+                        value={storeInfoDraft.address || ''}
+                        onChange={(e) => {
+                          setEditFlags(prev => ({ ...prev, storeInfo: true }));
+                          setStoreInfoDraft(prev => ({ ...prev, address: e.target.value }));
+                        }}
                         placeholder="Not set"
                         onBlur={(e) => {
                           e.target.style.border = '1px dashed transparent';
                           e.target.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.2)';
-                          handleUpdateStoreInfo('address', e.target.value);
                         }}
                         onFocus={(e) => e.target.style.border = '1px dashed #1d61ff'}
                         style={{
@@ -789,6 +843,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                         {showPasswordMap[selectedUser.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </span>
+                    {editFlags.storeInfo && (
+                      <button onClick={handleSaveStoreInfo} style={{ ...primaryBtnStyle, padding: '4px 8px', fontSize: '10px', marginLeft: 'auto' }}>
+                        Save Store Info
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1136,8 +1195,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <label style={formLabelStyle}>Business Name</label>
                     <input
                       type="text"
-                      defaultValue={selectedUser.businessProfile?.businessName || selectedUser.storeName}
-                      onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, businessName: e.target.value })}
+                      value={profileDraft.businessName || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, businessName: e.target.value }));
+                      }}
                       style={formInputStyle}
                     />
                   </div>
@@ -1146,8 +1208,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <label style={formLabelStyle}>Business Details, Operating Hours & FAQ</label>
                     <textarea
                       rows={3}
-                      defaultValue={selectedUser.businessProfile?.businessInfo || ''}
-                      onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, businessInfo: e.target.value })}
+                      value={profileDraft.businessInfo || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value }));
+                      }}
                       placeholder="e.g. Open Mon-Sat 9AM-7PM. Specializing in..."
                       style={{ ...formInputStyle, resize: 'vertical' }}
                     />
@@ -1157,8 +1222,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <label style={formLabelStyle}>AI Reply Tone</label>
                     <input
                       type="text"
-                      defaultValue={selectedUser.businessProfile?.replyTone || 'Professional, friendly, and concise'}
-                      onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, replyTone: e.target.value })}
+                      value={profileDraft.replyTone || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, replyTone: e.target.value }));
+                      }}
                       style={formInputStyle}
                     />
                   </div>
@@ -1167,12 +1235,23 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <label style={formLabelStyle}>Strict Rules & Limitations</label>
                     <textarea
                       rows={2}
-                      defaultValue={selectedUser.businessProfile?.aiRules || ''}
-                      onBlur={(e) => handleSaveProfile({ ...selectedUser.businessProfile, aiRules: e.target.value })}
+                      value={profileDraft.aiRules || ''}
+                      onChange={(e) => {
+                        setEditFlags(prev => ({ ...prev, profile: true }));
+                        setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
+                      }}
                       placeholder="e.g. Do not promise discounts without manager approval."
                       style={{ ...formInputStyle, resize: 'vertical' }}
                     />
                   </div>
+                  
+                  {editFlags.profile && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                      <button onClick={handleSaveProfile} style={primaryBtnStyle}>
+                        Save Profile & Sync to APK
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1190,15 +1269,18 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <div style={{ fontWeight: '700', fontSize: '13px', color: '#38bdf8' }}>Spam Protection</div>
                       <div
-                        onClick={() => handleSaveSpamSchedule({ ...selectedUser.spamConfig, spamEnabled: !selectedUser.spamConfig?.spamEnabled })}
+                        onClick={() => {
+                          setEditFlags(prev => ({ ...prev, spam: true }));
+                          setSpamDraft(prev => ({ ...prev, spamEnabled: !prev.spamEnabled }));
+                        }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
-                          background: selectedUser.spamConfig?.spamEnabled !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          color: selectedUser.spamConfig?.spamEnabled !== false ? '#10b981' : '#ef4444',
-                          border: `1px solid ${selectedUser.spamConfig?.spamEnabled !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                          background: spamDraft.spamEnabled !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: spamDraft.spamEnabled !== false ? '#10b981' : '#ef4444',
+                          border: `1px solid ${spamDraft.spamEnabled !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                         }}
                       >
-                        {selectedUser.spamConfig?.spamEnabled !== false ? 'ON' : 'OFF'}
+                        {spamDraft.spamEnabled !== false ? 'ON' : 'OFF'}
                       </div>
                     </div>
                     
@@ -1207,15 +1289,21 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input 
                             type="checkbox" 
-                            checked={selectedUser.spamConfig?.cooldownEnabled !== false} 
-                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, cooldownEnabled: e.target.checked })} 
+                            checked={spamDraft.cooldownEnabled !== false} 
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, cooldownEnabled: e.target.checked }));
+                            }} 
                           />
                           <span style={{ color: '#94a3b8' }}>Cooldown (s):</span>
                         </div>
                         <input
                           type="number"
-                          defaultValue={selectedUser.spamConfig?.cooldownSeconds || 90}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, cooldownSeconds: parseInt(e.target.value) || 90 })}
+                          value={spamDraft.cooldownSeconds ?? 90}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }));
+                          }}
                           style={{ ...cleanInputStyle, width: '60px' }}
                         />
                       </div>
@@ -1223,15 +1311,21 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input 
                             type="checkbox" 
-                            checked={selectedUser.spamConfig?.maxRepliesEnabled !== false} 
-                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, maxRepliesEnabled: e.target.checked })} 
+                            checked={spamDraft.maxRepliesEnabled !== false} 
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, maxRepliesEnabled: e.target.checked }));
+                            }} 
                           />
                           <span style={{ color: '#94a3b8' }}>Max Replies:</span>
                         </div>
                         <input
                           type="number"
-                          defaultValue={selectedUser.spamConfig?.maxReplies || 3}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, maxReplies: parseInt(e.target.value) || 3 })}
+                          value={spamDraft.maxReplies ?? 3}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, maxReplies: parseInt(e.target.value) || 0 }));
+                          }}
                           style={{ ...cleanInputStyle, width: '60px' }}
                         />
                       </div>
@@ -1239,15 +1333,21 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input 
                             type="checkbox" 
-                            checked={selectedUser.spamConfig?.windowEnabled !== false} 
-                            onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, windowEnabled: e.target.checked })} 
+                            checked={spamDraft.windowEnabled !== false} 
+                            onChange={(e) => {
+                              setEditFlags(prev => ({ ...prev, spam: true }));
+                              setSpamDraft(prev => ({ ...prev, windowEnabled: e.target.checked }));
+                            }} 
                           />
                           <span style={{ color: '#94a3b8' }}>Window (mins):</span>
                         </div>
                         <input
                           type="number"
-                          defaultValue={selectedUser.spamConfig?.windowMinutes || 10}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, windowMinutes: parseInt(e.target.value) || 10 })}
+                          value={spamDraft.windowMinutes ?? 10}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, windowMinutes: parseInt(e.target.value) || 0 }));
+                          }}
                           style={{ ...cleanInputStyle, width: '60px' }}
                         />
                       </div>
@@ -1259,23 +1359,29 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <div style={{ fontWeight: '700', fontSize: '13px', color: '#38bdf8' }}>Operating Hours</div>
                       <div
-                        onClick={() => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleEnabled: !selectedUser.spamConfig?.scheduleEnabled })}
+                        onClick={() => {
+                          setEditFlags(prev => ({ ...prev, spam: true }));
+                          setSpamDraft(prev => ({ ...prev, scheduleEnabled: !prev.scheduleEnabled }));
+                        }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
-                          background: selectedUser.spamConfig?.scheduleEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          color: selectedUser.spamConfig?.scheduleEnabled ? '#10b981' : '#ef4444',
-                          border: `1px solid ${selectedUser.spamConfig?.scheduleEnabled ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                          background: spamDraft.scheduleEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: spamDraft.scheduleEnabled ? '#10b981' : '#ef4444',
+                          border: `1px solid ${spamDraft.scheduleEnabled ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                         }}
                       >
-                        {selectedUser.spamConfig?.scheduleEnabled ? 'ON' : 'OFF'}
+                        {spamDraft.scheduleEnabled ? 'ON' : 'OFF'}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: '#94a3b8' }}>Mode:</span>
                         <select
-                          value={selectedUser.spamConfig?.scheduleMode || 'ONLY_DURING'}
-                          onChange={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleMode: e.target.value })}
+                          value={spamDraft.scheduleMode || 'ONLY_DURING'}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, scheduleMode: e.target.value }));
+                          }}
                           style={{ ...cleanInputStyle, width: '120px' }}
                         >
                           <option value="ONLY_DURING">Reply During Hours</option>
@@ -1286,8 +1392,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <span style={{ color: '#94a3b8' }}>Start:</span>
                         <input
                           type="time"
-                          defaultValue={selectedUser.spamConfig?.scheduleStart || '09:00'}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleStart: e.target.value })}
+                          value={spamDraft.scheduleStart || '09:00'}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, scheduleStart: e.target.value }));
+                          }}
                           style={{ ...cleanInputStyle, width: '120px' }}
                         />
                       </div>
@@ -1295,8 +1404,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <span style={{ color: '#94a3b8' }}>End:</span>
                         <input
                           type="time"
-                          defaultValue={selectedUser.spamConfig?.scheduleEnd || '18:00'}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleEnd: e.target.value })}
+                          value={spamDraft.scheduleEnd || '18:00'}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, scheduleEnd: e.target.value }));
+                          }}
                           style={{ ...cleanInputStyle, width: '120px' }}
                         />
                       </div>
@@ -1304,14 +1416,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Active Days:</span>
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                            const days = selectedUser.spamConfig?.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                            const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
                             const isSelected = days.includes(day);
                             return (
                               <button
                                 key={day}
                                 onClick={() => {
                                   const newDays = isSelected ? days.filter(d => d !== day) : [...days, day];
-                                  handleSaveSpamSchedule({ ...selectedUser.spamConfig, scheduleDays: newDays });
+                                  setEditFlags(prev => ({ ...prev, spam: true }));
+                                  setSpamDraft(prev => ({ ...prev, scheduleDays: newDays }));
                                 }}
                                 style={{
                                   background: isSelected ? '#1d61ff' : 'rgba(255, 255, 255, 0.05)',
@@ -1333,13 +1446,24 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Out of Hours Msg:</span>
                         <textarea
                           rows={2}
-                          defaultValue={selectedUser.spamConfig?.outOfHoursMsg || 'Thanks for contacting us! We are currently closed.'}
-                          onBlur={(e) => handleSaveSpamSchedule({ ...selectedUser.spamConfig, outOfHoursMsg: e.target.value })}
+                          value={spamDraft.outOfHoursMsg || ''}
+                          onChange={(e) => {
+                            setEditFlags(prev => ({ ...prev, spam: true }));
+                            setSpamDraft(prev => ({ ...prev, outOfHoursMsg: e.target.value }));
+                          }}
                           style={{ ...formInputStyle, resize: 'vertical' }}
                         />
                       </div>
                     </div>
                   </div>
+                  
+                  {editFlags.spam && (
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button onClick={handleSaveSpamSchedule} style={primaryBtnStyle}>
+                        Save Spam & Schedule Rules
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

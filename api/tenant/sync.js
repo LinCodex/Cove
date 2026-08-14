@@ -1,4 +1,4 @@
-import { getUser, createUser, saveUser, addActivities, getActivities, parseBody } from '../_db.js';
+import { getUser, saveUser, addActivities, getActivities, parseBody } from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -27,20 +27,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { currentBalance, recentLogs } = body;
+      const { recentLogs } = body;
 
-      // If APK reports recent activity logs, insert into activities table
+      // If APK reports recent activity logs, record them in activities table
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
         await addActivities(user.id, recentLogs);
-
-        // Update total request count
         user.totalRequests = (user.totalRequests || 0) + recentLogs.length;
-      }
 
-      // If APK sent a valid deduction, update server balance
-      if (typeof currentBalance === 'number' && !isNaN(currentBalance)) {
-        if (user.balance > 0 && currentBalance < user.balance) {
-          user.balance = Math.max(0, currentBalance);
+        // Deduct cost of new activities from server balance
+        const totalDeduction = recentLogs.reduce((acc, log) => acc + (parseFloat(log.cost) || user.fixedFeePerMessage || 0.005), 0);
+        if (totalDeduction > 0 && user.balance > 0) {
+          user.balance = Math.max(0, user.balance - totalDeduction);
           user.status = user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active';
         }
       }
@@ -51,11 +48,13 @@ export default async function handler(req, res) {
     // Load recent activities for this store
     const activities = await getActivities(user.id, 200);
 
-    // Return latest live config to client APK
+    // Return authoritative live config from Master Control to client APK
     return res.status(200).json({
       success: true,
       userId: user.id,
       storeName: user.storeName,
+      phone: user.phone || '',
+      address: user.address || '',
       balance: user.balance,
       status: user.balance <= 0 ? 'Paused (Zero Balance)' : 'Active',
       pricing: {
