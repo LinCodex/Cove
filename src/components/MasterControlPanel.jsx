@@ -1110,14 +1110,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
                     color: selectedUser.forcedPause ? '#dc2626' : '#334155'
                   }}
                 >
-                  <Ban size={13} color={selectedUser.forcedPause ? '#dc2626' : '#64748b'} />
-                  <span>{selectedUser.forcedPause ? '⛔ Resume Auto-Reply' : '⏸️ Force Pause APK'}</span>
+                  {selectedUser.forcedPause ? 'Resume Auto-Reply' : 'Force Pause APK'}
                 </button>
 
                 <button
