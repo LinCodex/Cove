@@ -54,7 +54,7 @@ export default function PasswordModal({ isOpen, onClose }) {
             <Lock size={18} />
           </div>
           <h3 id="clu-modal-title">Get the APK</h3>
-          <p>This build is password-protected. Enter your access key to download.</p>
+          <p>The APK is currently for beta users only. Please enter the access password that was shared with you.</p>
         </div>
 
         <form onSubmit={handleVerifyAndDownload} className="clu-modal-form">

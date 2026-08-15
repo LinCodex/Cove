@@ -7,7 +7,7 @@ import '../landing.css';
 const FAQS = [
   {
     q: 'How does the wallet work?',
-    a: 'Recharge by Visa, Zelle, Venmo, or cash. We credit your store wallet by hand — there is no self-serve checkout. Each auto-reply is billed at $0.005, with a lower rate the more you recharge. Credits never expire.'
+    a: 'Recharge by Zelle, Venmo, or cash. We credit your store wallet by hand — there is no self-serve checkout. Each auto-reply is billed at $0.005, with a lower rate the more you recharge. Credits never expire.'
   },
   {
     q: 'What is the message rate?',
@@ -15,7 +15,7 @@ const FAQS = [
   },
   {
     q: 'How do I add funds?',
-    a: 'Send a manual recharge by Visa, Zelle, Venmo, or cash. Once we confirm payment, the balance is added to your store wallet in Cove.'
+    a: 'Send a manual recharge by Zelle, Venmo, or cash. Once we confirm payment, the balance is added to your store wallet in Cove.'
   },
   {
     q: 'Where are customer messages stored?',
@@ -39,7 +39,6 @@ const TIERS = [
 ];
 
 const PAYMENTS = [
-  { name: 'Visa', hint: 'Card transfer' },
   { name: 'Zelle', hint: 'Instant bank' },
   { name: 'Venmo', hint: 'Peer pay' },
   { name: 'Cash', hint: 'In person' }
@@ -91,61 +90,21 @@ export default function LandingPage() {
           <a href="#privacy">Privacy</a>
           <a href="#faq">FAQ</a>
         </nav>
-        <a href="#pricing" className="clu-nav-ghost">Pricing</a>
+        <button type="button" className="clu-nav-ghost" onClick={() => setIsModalOpen(true)}>
+          Get the APK
+        </button>
       </header>
 
       <section className="clu-hero">
-        <svg className="clu-hero-bg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" aria-hidden>
-          <defs>
-            <linearGradient id="cluSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2563EB" />
-              <stop offset="38%" stopColor="#5B9FFF" />
-              <stop offset="70%" stopColor="#C5DEFF" />
-              <stop offset="100%" stopColor="#FFFFFF" />
-            </linearGradient>
-            <linearGradient id="cluFog" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-              <stop offset="55%" stopColor="rgba(255,255,255,0.72)" />
-              <stop offset="100%" stopColor="#FFFFFF" />
-            </linearGradient>
-            <linearGradient id="cluBubbleA" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.38)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.12)" />
-            </linearGradient>
-            <linearGradient id="cluBubbleB" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
-              <stop offset="100%" stopColor="rgba(191,219,254,0.2)" />
-            </linearGradient>
-          </defs>
-          <rect width="1440" height="900" fill="url(#cluSky)" />
-
+        <svg className="clu-hero-bg" viewBox="0 0 820 900" preserveAspectRatio="xMinYMid slice" aria-hidden>
           <g className="clu-signal-drift" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2">
-            <circle cx="360" cy="430" r="70" />
-            <circle cx="360" cy="430" r="140" />
-            <circle cx="360" cy="430" r="220" />
-            <circle cx="360" cy="430" r="310" className="clu-ring-slow" />
-            <circle cx="360" cy="430" r="410" className="clu-ring-slower" />
+            <circle cx="300" cy="430" r="70" />
+            <circle cx="300" cy="430" r="140" />
+            <circle cx="300" cy="430" r="220" />
+            <circle cx="300" cy="430" r="310" />
           </g>
-          <circle cx="360" cy="430" r="18" fill="rgba(255,255,255,0.9)" />
-          <circle cx="360" cy="430" r="8" fill="#1D4ED8" />
-
-          <g className="clu-bubble-drift" fill="url(#cluBubbleA)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2">
-            <path d="M168 214h210a28 28 0 0 1 28 28v78a28 28 0 0 1-28 28H214l-34 26v-26h-12a28 28 0 0 1-28-28v-78a28 28 0 0 1 28-28z" />
-            <path d="M980 168h250a28 28 0 0 1 28 28v86a28 28 0 0 1-28 28h-36v24l-32-24H980a28 28 0 0 1-28-28v-86a28 28 0 0 1 28-28z" fill="url(#cluBubbleB)" />
-            <path d="M118 520h176a24 24 0 0 1 24 24v62a24 24 0 0 1-24 24H164l-28 22v-22h-18a24 24 0 0 1-24-24v-62a24 24 0 0 1 24-24z" />
-            <path d="M760 560h230a26 26 0 0 1 26 26v74a26 26 0 0 1-26 26h-40v22l-30-22H760a26 26 0 0 1-26-26v-74a26 26 0 0 1 26-26z" fill="url(#cluBubbleB)" />
-          </g>
-          <g fill="rgba(255,255,255,0.55)">
-            <rect x="196" y="248" width="132" height="8" rx="4" />
-            <rect x="196" y="268" width="96" height="8" rx="4" opacity="0.7" />
-            <rect x="1008" y="204" width="154" height="8" rx="4" />
-            <rect x="1008" y="224" width="118" height="8" rx="4" opacity="0.7" />
-            <rect x="142" y="552" width="108" height="7" rx="3.5" />
-            <rect x="788" y="598" width="150" height="8" rx="4" />
-            <rect x="788" y="618" width="92" height="8" rx="4" opacity="0.7" />
-          </g>
-
-          <rect y="520" width="1440" height="380" fill="url(#cluFog)" />
+          <circle cx="300" cy="430" r="18" fill="rgba(255,255,255,0.9)" />
+          <circle cx="300" cy="430" r="8" fill="#1D4ED8" />
         </svg>
 
         <div className="clu-hero-copy">
@@ -225,7 +184,7 @@ export default function LandingPage() {
         <div className="clu-band-inner">
           <h2 className="clu-h2 clu-reveal">Simple flat rate. Better as you recharge.</h2>
           <p className="clu-sub clu-reveal">
-            Standard pricing is $0.005 per auto-reply. Recharges are manual — Visa, Zelle, Venmo, or cash — and larger wallets unlock a discounted per-message rate.
+            Standard pricing is $0.005 per auto-reply. Recharges are manual — Zelle, Venmo, or cash — and larger wallets unlock a discounted per-message rate.
           </p>
 
           <div className="clu-tier-grid">
@@ -329,7 +288,7 @@ export default function LandingPage() {
 
       <section className="clu-endcta">
         <h2>SMS AI that replies during the shift, not after.</h2>
-        <p>Recharge by Visa, Zelle, Venmo, or cash. $0.005 per message, with better rates as you add more.</p>
+        <p>Recharge by Zelle, Venmo, or cash. $0.005 per message, with better rates as you add more.</p>
         <a href="#pricing" className="clu-btn-white">See recharge options</a>
       </section>
 

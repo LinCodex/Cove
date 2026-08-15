@@ -73,6 +73,9 @@
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;
   padding: 8px 16px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 .clu-hero {
@@ -80,23 +83,23 @@
   min-height: 100vh;
   padding: 110px 8vw 0;
   overflow: hidden;
+  background: linear-gradient(180deg, #2563EB 0%, #5B9FFF 34%, #C5DEFF 68%, #FFFFFF 100%);
 }
 
 .clu-hero-bg {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(54%, 760px);
   height: 100%;
   z-index: 0;
+  pointer-events: none;
 }
 
 .clu-signal-drift {
-  transform-origin: 360px 430px;
+  transform-origin: 300px 430px;
   animation: cluPulseRings 7s ease-in-out infinite;
-}
-
-.clu-bubble-drift {
-  animation: cluDrift 22s ease-in-out infinite alternate;
 }
 
 .clu-hero-copy {
@@ -1026,11 +1029,6 @@
   50% { transform: translateY(-10px); }
 }
 
-@keyframes cluDrift {
-  from { transform: translateX(0) scale(1); }
-  to { transform: translateX(-18px) scale(1.02); }
-}
-
 @keyframes cluPulseRings {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.045); }
@@ -1042,7 +1040,6 @@
   .clu-overlay,
   .clu-nav,
   .clu-signal-drift,
-  .clu-bubble-drift,
   .clu-float,
   .clu-faq-body p,
   .clu-modal,
@@ -1073,6 +1070,14 @@
   .clu-hero {
     padding: 92px 20px 0;
     min-height: auto;
+  }
+
+  .clu-hero-bg {
+    width: 100%;
+    max-width: none;
+    top: auto;
+    height: 46%;
+    opacity: 0.35;
   }
 
   .clu-hero-copy {
