@@ -27,7 +27,7 @@ export default function PasswordModal({ isOpen, onClose }) {
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = '/cove-app.apk';
-        link.download = 'cove-autoresponder-v1.0.5.apk';
+        link.download = 'cove-autoresponder-v1.0.6.apk';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
