@@ -170,6 +170,7 @@ function rowToListUser(row) {
     lastActive: row.last_active ? new Date(row.last_active).getTime() : 0,
     pricingMode: row.pricing_mode,
     fixedFeePerMessage: parseFloat(row.fixed_fee_per_message),
+    totalRequests: row.total_requests || 0,
     createdAt: row.created_at
   };
 }
@@ -226,13 +227,106 @@ export async function getAllUsers() {
 export async function getAllUsersLite() {
   const { data, error } = await supabase
     .from('stores')
-    .select('id, store_name, phone, balance, forced_pause, last_active, created_at, pricing_mode, fixed_fee_per_message')
+    .select('id, store_name, phone, balance, forced_pause, last_active, created_at, pricing_mode, fixed_fee_per_message, total_requests')
     .neq('id', SYSTEM_STORE_ID)
     .order('created_at', { ascending: false });
 
   if (error) { console.error('getAllUsersLite error:', error); return []; }
 
   return (data || []).map(rowToListUser);
+}
+
+/** Aggregated totals across every store for the Control home dashboard. */
+export async function getPlatformStats() {
+  const { data: stores, error: storesError } = await supabase
+    .from('stores')
+    .select('id, store_name, balance, total_requests, forced_pause, last_active, created_at')
+    .neq('id', SYSTEM_STORE_ID)
+    .order('created_at', { ascending: false });
+
+  if (storesError) {
+    console.error('getPlatformStats stores error:', storesError);
+  }
+
+  const storeRows = stores || [];
+  const byStore = {};
+  for (const s of storeRows) {
+    byStore[s.id] = { revenue: 0, sms: 0, tokensIn: 0, tokensOut: 0 };
+  }
+
+  let from = 0;
+  const pageSize = 1000;
+  let totalRevenue = 0;
+  let totalSms = 0;
+  let tokensIn = 0;
+  let tokensOut = 0;
+
+  while (from < 80000) {
+    const { data: acts, error: actError } = await supabase
+      .from('activities')
+      .select('cost, tokens_in, tokens_out, store_id')
+      .neq('store_id', SYSTEM_STORE_ID)
+      .range(from, from + pageSize - 1);
+
+    if (actError) {
+      console.error('getPlatformStats activities error:', actError);
+      break;
+    }
+    if (!acts || acts.length === 0) break;
+
+    for (const a of acts) {
+      const cost = parseFloat(a.cost) || 0;
+      const tin = parseInt(a.tokens_in) || 0;
+      const tout = parseInt(a.tokens_out) || 0;
+      totalRevenue += cost;
+      totalSms += 1;
+      tokensIn += tin;
+      tokensOut += tout;
+      if (!byStore[a.store_id]) {
+        byStore[a.store_id] = { revenue: 0, sms: 0, tokensIn: 0, tokensOut: 0 };
+      }
+      byStore[a.store_id].revenue += cost;
+      byStore[a.store_id].sms += 1;
+      byStore[a.store_id].tokensIn += tin;
+      byStore[a.store_id].tokensOut += tout;
+    }
+
+    if (acts.length < pageSize) break;
+    from += pageSize;
+  }
+
+  const totalBalance = storeRows.reduce((sum, s) => sum + (parseFloat(s.balance) || 0), 0);
+  const storeRequests = storeRows.reduce((sum, s) => sum + (parseInt(s.total_requests) || 0), 0);
+  const activeCount = storeRows.filter((s) => !s.forced_pause && (parseFloat(s.balance) || 0) > 0).length;
+
+  const storeBreakdown = storeRows.map((s) => {
+    const agg = byStore[s.id] || { revenue: 0, sms: 0, tokensIn: 0, tokensOut: 0 };
+    const sms = Math.max(agg.sms, parseInt(s.total_requests) || 0);
+    return {
+      id: s.id,
+      storeName: s.store_name || s.id,
+      balance: parseFloat(s.balance) || 0,
+      revenue: agg.revenue,
+      sms,
+      tokens: agg.tokensIn + agg.tokensOut,
+      lastActive: s.last_active ? new Date(s.last_active).getTime() : 0,
+      status: Boolean(s.forced_pause)
+        ? 'Force Paused'
+        : ((parseFloat(s.balance) || 0) <= 0 ? 'Paused (Zero Balance)' : 'Active')
+    };
+  }).sort((a, b) => b.revenue - a.revenue);
+
+  return {
+    storeCount: storeRows.length,
+    activeCount,
+    pausedCount: storeRows.length - activeCount,
+    totalBalance,
+    totalSms: Math.max(totalSms, storeRequests),
+    totalRevenue,
+    tokensIn,
+    tokensOut,
+    storeBreakdown
+  };
 }
 
 export async function getUser(userId) {

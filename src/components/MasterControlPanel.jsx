@@ -32,14 +32,17 @@ import {
   Layers,
   Eye,
   EyeOff,
-  Bot,
   Receipt,
   Wallet,
   CreditCard,
   ArrowUpRight,
   ArrowDownLeft,
-  History
+  History,
+  Home as HomeIcon,
+  Globe,
+  PauseCircle
 } from 'lucide-react';
+import { translate } from '../i18n';
 
 const PROVIDER_DEFAULTS = {
   GEMINI: {
@@ -104,6 +107,23 @@ export default function MasterControlPanel({ onBackToHome }) {
 
   // Navigation and UI State
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'ai_keys', 'activity', 'spam_schedule', 'pricing', 'blacklist'
+  const [sidebarPage, setSidebarPage] = useState('home'); // 'home' | 'store' | 'settings'
+  const [locale, setLocale] = useState(() => {
+    try {
+      return localStorage.getItem('cove_control_locale') === 'zh' ? 'zh' : 'en';
+    } catch {
+      return 'en';
+    }
+  });
+  const t = (key, params) => translate(locale, key, params);
+  const persistLocale = (next) => {
+    setLocale(next);
+    try { localStorage.setItem('cove_control_locale', next); } catch { /* ignore */ }
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en';
+    }
+  };
+  const [platformStats, setPlatformStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
@@ -349,7 +369,7 @@ export default function MasterControlPanel({ onBackToHome }) {
           });
           setSelectedUserId(prev => {
             if (prev && data.users.some(u => u.id === prev)) return prev;
-            return data.users[0]?.id || '';
+            return prev || '';
           });
         }
       }
@@ -369,21 +389,49 @@ export default function MasterControlPanel({ onBackToHome }) {
     }
   };
 
+  const fetchPlatformStats = async () => {
+    try {
+      const res = await adminFetch(`/api/admin/users?stats=1&_t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      if (res.status === 401) {
+        clearAdminSession();
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.stats) setPlatformStats(data.stats);
+    } catch (err) {
+      console.warn('Failed to load platform stats:', err);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchUsers();
       fetchMasterRule();
+      fetchPlatformStats();
       const interval = setInterval(fetchUsers, 4000);
-      return () => clearInterval(interval);
+      const statsInterval = setInterval(fetchPlatformStats, 8000);
+      return () => {
+        clearInterval(interval);
+        clearInterval(statsInterval);
+      };
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || !selectedUserId) return;
+    if (!isAuthenticated || !selectedUserId || sidebarPage !== 'store') return;
     fetchUserDetail(selectedUserId);
     const interval = setInterval(() => fetchUserDetail(selectedUserId), 2500);
     return () => clearInterval(interval);
-  }, [selectedUserId, isAuthenticated]);
+  }, [selectedUserId, isAuthenticated, sidebarPage]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
+    }
+  }, [locale]);
 
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
 
@@ -403,12 +451,12 @@ export default function MasterControlPanel({ onBackToHome }) {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success !== false) {
         if (typeof data.masterAiRule === 'string') setMasterAiRule(data.masterAiRule);
-        triggerToast('System master AI rule saved. Applies to every store and model.');
+        triggerToast(t('savedMasterRule'));
       } else {
-        triggerToast('Failed to save system master AI rule');
+        triggerToast(t('failedMasterRule'));
       }
     } catch (err) {
-      triggerToast('Failed to save system master AI rule');
+      triggerToast(t('failedMasterRule'));
     } finally {
       setMasterRuleSaving(false);
     }
@@ -617,6 +665,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
       setUsers(prev => [createdUser, ...prev.filter(u => u.id !== createdUser.id)]);
       setSelectedUserId(createdUser.id);
+      setSidebarPage('store');
 
       triggerToast(`Store "${payload.id}" created successfully!`);
       setShowCreateModal(false);
@@ -924,16 +973,16 @@ export default function MasterControlPanel({ onBackToHome }) {
           textAlign: 'center'
         }}>
           <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.3px' }}>
-            Cove Master Control
+            {t('coveMasterControl')}
           </h2>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 24px 0', lineHeight: '1.5' }}>
-            Enter Master Administrator password to configure store accounts, API keys & sync.
+            {t('loginSubtitle')}
           </p>
 
           <form onSubmit={handleAdminAuth} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <input
               type="password"
-              placeholder="Admin password..."
+              placeholder={t('adminPassword')}
               value={authPassword}
               onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
               style={customInputStyle}
@@ -962,7 +1011,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               disabled={authLoading}
               style={{ ...solidPrimaryBtnStyle, width: '100%', padding: '12px 0' }}
             >
-              {authLoading ? 'Verifying...' : 'Sign In to Console'}
+              {authLoading ? t('verifying') : t('signInConsole')}
             </button>
 
             <button
@@ -977,9 +1026,15 @@ export default function MasterControlPanel({ onBackToHome }) {
                 marginTop: '4px'
               }}
             >
-              ← Back to Website
+              ← {t('backToWebsite')}
             </button>
           </form>
+          <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px' }}>
+              <button type="button" onClick={() => persistLocale('en')} style={{ border: 'none', background: locale === 'en' ? '#fff' : 'transparent', color: '#0f172a', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>{t('english')}</button>
+              <button type="button" onClick={() => persistLocale('zh')} style={{ border: 'none', background: locale === 'zh' ? '#fff' : 'transparent', color: '#0f172a', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>{t('chineseMandarin')}</button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1063,16 +1118,20 @@ export default function MasterControlPanel({ onBackToHome }) {
               flexShrink: 0,
               ...tapBtn
             }}
-            aria-label="Open store list"
+            aria-label={t('openStoreList')}
           >
             <Menu size={18} color="#0f172a" />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Cove Control
+              {t('coveControl')}
             </div>
             <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedUser ? (selectedUser.storeName || selectedUser.id) : 'Select a store'}
+              {sidebarPage === 'home'
+                ? t('home')
+                : sidebarPage === 'settings'
+                  ? t('settings')
+                  : (selectedUser ? (selectedUser.storeName || selectedUser.id) : t('selectStore'))}
             </div>
           </div>
           <button
@@ -1141,18 +1200,56 @@ export default function MasterControlPanel({ onBackToHome }) {
         <div style={{ padding: '20px 16px 14px 16px', borderBottom: '1px solid #f1f5f9' }}>
           <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.3px' }}>
-              Cove Control
+              {t('coveControl')}
             </span>
             {isMobile && (
               <button
                 type="button"
                 onClick={() => setStoreDrawerOpen(false)}
                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                aria-label="Close store list"
+                aria-label={t('closeStoreList')}
               >
                 <X size={18} />
               </button>
             )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+            {[
+              { id: 'home', label: t('home'), icon: HomeIcon },
+              { id: 'settings', label: t('settings'), icon: Settings }
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = sidebarPage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSidebarPage(item.id);
+                    if (isMobile) setStoreDrawerOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: active ? '1px solid #e2e8f0' : '1px solid transparent',
+                    background: active ? '#f1f5f9' : 'transparent',
+                    color: '#0f172a',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <Icon size={15} color={active ? '#0f172a' : '#64748b'} />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Quick Search Store Input */}
@@ -1168,7 +1265,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             <Search size={13} color="#94a3b8" style={{ marginRight: '6px' }} />
             <input
               type="text"
-              placeholder="Search stores..."
+              placeholder={t('searchStores')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -1205,7 +1302,7 @@ export default function MasterControlPanel({ onBackToHome }) {
             }}
           >
             <Plus size={14} />
-            <span>Create Store Account</span>
+            <span>{t('createStoreAccount')}</span>
           </button>
         </div>
 
@@ -1219,22 +1316,24 @@ export default function MasterControlPanel({ onBackToHome }) {
           gap: '4px'
         }}>
           <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', padding: '6px 8px', textTransform: 'uppercase' }}>
-            Store Accounts ({filteredUsers.length})
+            {t('storeAccounts')} ({filteredUsers.length})
           </div>
 
           {filteredUsers.length === 0 ? (
             <div style={{ padding: '24px 8px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
-              No stores found.
+              {t('noStoresFound')}
             </div>
           ) : (
             filteredUsers.map(user => {
-              const isSelected = selectedUser && user.id === selectedUser.id;
+              const isSelected = sidebarPage === 'store' && selectedUser && user.id === selectedUser.id;
               const isDepleted = (user.balance || 0) <= 0;
               return (
                 <div
                   key={user.id}
                   onClick={() => {
                     setSelectedUserId(user.id);
+                    setSidebarPage('store');
+                    setActiveTab('profile');
                     if (isMobile) setStoreDrawerOpen(false);
                   }}
                   style={{
@@ -1303,13 +1402,13 @@ export default function MasterControlPanel({ onBackToHome }) {
             onClick={onBackToHome}
             style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
-            <ArrowLeft size={13} /> Back to Site
+            <ArrowLeft size={13} /> {t('backToSite')}
           </button>
           <button
             onClick={handleAdminLogout}
             style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
           >
-            Sign Out
+            {t('signOut')}
           </button>
         </div>
       </aside>
@@ -1326,36 +1425,184 @@ export default function MasterControlPanel({ onBackToHome }) {
         boxSizing: 'border-box'
       }}>
 
-        <div style={{ ...cardSectionStyle, marginBottom: '16px', padding: isMobile ? '14px' : '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+        {sidebarPage === 'home' && (() => {
+          const stats = platformStats || {
+            storeCount: users.length,
+            activeCount: users.filter((u) => !u.forcedPause && (u.balance || 0) > 0).length,
+            pausedCount: users.filter((u) => u.forcedPause || (u.balance || 0) <= 0).length,
+            totalBalance: users.reduce((sum, u) => sum + (u.balance || 0), 0),
+            totalSms: users.reduce((sum, u) => sum + (u.totalRequests || (u.activities || []).length), 0),
+            totalRevenue: users.reduce((sum, u) => sum + (u.activities || []).reduce((s, a) => s + (a.cost || 0), 0), 0),
+            tokensIn: 0,
+            tokensOut: 0,
+            storeBreakdown: users.map((u) => ({
+              id: u.id,
+              storeName: u.storeName || u.id,
+              balance: u.balance || 0,
+              revenue: (u.activities || []).reduce((s, a) => s + (a.cost || 0), 0),
+              sms: u.totalRequests || (u.activities || []).length,
+              status: u.status || ((u.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Active')
+            }))
+          };
+          const kpis = [
+            { label: t('kpiRevenue'), value: `$${(stats.totalRevenue || 0).toFixed(2)}`, hint: t('billedToStores'), icon: DollarSign, color: '#059669' },
+            { label: t('kpiSms'), value: Number(stats.totalSms || 0).toLocaleString(), hint: t('autoRepliesSent'), icon: MessageSquare, color: '#1d61ff' },
+            { label: t('kpiStores'), value: String(stats.storeCount || 0), hint: t('allStores'), icon: Users, color: '#0f172a' },
+            { label: t('kpiBalance'), value: `$${(stats.totalBalance || 0).toFixed(2)}`, hint: t('availableCredit'), icon: Wallet, color: '#7c3aed' },
+            { label: t('kpiActive'), value: String(stats.activeCount || 0), hint: t('liveNow'), icon: Activity, color: '#059669' },
+            { label: t('kpiPaused'), value: String(stats.pausedCount || 0), hint: t('zeroOrForcePaused'), icon: PauseCircle, color: '#dc2626' },
+            { label: t('kpiTokens'), value: Number((stats.tokensIn || 0) + (stats.tokensOut || 0)).toLocaleString(), hint: t('inPlusOut'), icon: Zap, color: '#d97706' }
+          ];
+          return (
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Bot size={16} color="#1d61ff" />
-                System Master AI Rule
-              </h3>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', lineHeight: 1.45 }}>
-                Applied to every store and every AI model (primary and backups). Store-specific rules still apply underneath this.
-              </p>
+              <div style={{ marginBottom: '20px' }}>
+                <h1 style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>{t('overviewTitle')}</h1>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '6px 0 0 0' }}>{t('overviewSubtitle')}</p>
+              </div>
+              <div style={colGrid(200, 12)}>
+                {kpis.map((k) => {
+                  const Icon = k.icon;
+                  return (
+                    <div key={k.label} style={{ ...kpiCardStyle, minHeight: '108px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{k.label}</div>
+                        <Icon size={15} color={k.color} />
+                      </div>
+                      <div style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.4px' }}>{k.value}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>{k.hint}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ ...cardSectionStyle, marginTop: '16px', padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '16px 18px', borderBottom: '1px solid #f1f5f9', fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                  {t('storeBreakdown')}
+                </div>
+                {(stats.storeBreakdown || []).length === 0 ? (
+                  <div style={{ padding: '28px 18px', color: '#94a3b8', fontSize: '13px' }}>{t('noStoreData')}</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '10px 16px', fontWeight: 700 }}>{t('storeCol')}</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 700 }}>{t('revenueCol')}</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 700 }}>{t('smsCol')}</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 700 }}>{t('balanceCol')}</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 700 }}>{t('statusCol')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.storeBreakdown.map((row) => (
+                          <tr
+                            key={row.id}
+                            onClick={() => {
+                              setSelectedUserId(row.id);
+                              setSidebarPage('store');
+                            }}
+                            style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer' }}
+                          >
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{row.storeName}</div>
+                              <div style={{ fontSize: '11px', color: '#94a3b8' }}>ID: {row.id}</div>
+                            </td>
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: '#059669' }}>${(row.revenue || 0).toFixed(2)}</td>
+                            <td style={{ padding: '12px 16px', color: '#334155' }}>{Number(row.sms || 0).toLocaleString()}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: (row.balance || 0) <= 0 ? '#dc2626' : '#0f172a' }}>${(row.balance || 0).toFixed(2)}</td>
+                            <td style={{ padding: '12px 16px', color: row.status === 'Active' ? '#059669' : '#dc2626', fontWeight: 600 }}>{row.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleSaveMasterRule}
-              disabled={masterRuleSaving}
-              style={{ ...solidPrimaryBtnStyle, opacity: masterRuleSaving ? 0.7 : 1, ...tapBtn }}
-            >
-              {masterRuleSaving ? 'Saving...' : 'Save System Rule'}
-            </button>
-          </div>
-          <textarea
-            rows={isMobile ? 4 : 3}
-            value={masterAiRule}
-            onChange={(e) => setMasterAiRule(e.target.value)}
-            placeholder="e.g. Never invent prices. Always reply in the customer's language. Do not mention competitor brands."
-            style={{ ...customInputStyle, resize: 'vertical', minHeight: '84px', fontFamily: 'inherit' }}
-          />
-        </div>
+          );
+        })()}
 
-        {selectedUser ? (
+        {sidebarPage === 'settings' && (
+          <div>
+            <div style={{ marginBottom: '20px' }}>
+              <h1 style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>{t('settings')}</h1>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '6px 0 0 0' }}>{t('settingsIntro')}</p>
+            </div>
+
+            <div style={{ ...cardSectionStyle, marginBottom: '16px', padding: isMobile ? '14px' : '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <Globe size={16} color="#0f172a" />
+                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{t('language')}</h3>
+              </div>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px 0', lineHeight: 1.45 }}>{t('languageHint')}</p>
+              <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => persistLocale('en')}
+                  style={{
+                    border: 'none',
+                    background: locale === 'en' ? '#ffffff' : 'transparent',
+                    boxShadow: locale === 'en' ? '0 1px 4px rgba(15,23,42,0.08)' : 'none',
+                    color: '#0f172a',
+                    borderRadius: '9px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('english')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => persistLocale('zh')}
+                  style={{
+                    border: 'none',
+                    background: locale === 'zh' ? '#ffffff' : 'transparent',
+                    boxShadow: locale === 'zh' ? '0 1px 4px rgba(15,23,42,0.08)' : 'none',
+                    color: '#0f172a',
+                    borderRadius: '9px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('chineseMandarin')}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ ...cardSectionStyle, padding: isMobile ? '14px' : '18px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    {t('masterRuleTitle')}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', lineHeight: 1.45 }}>
+                    {t('masterRuleDesc')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveMasterRule}
+                  disabled={masterRuleSaving}
+                  style={{ ...solidPrimaryBtnStyle, opacity: masterRuleSaving ? 0.7 : 1, ...tapBtn }}
+                >
+                  {masterRuleSaving ? t('saving') : t('saveSystemRule')}
+                </button>
+              </div>
+              <textarea
+                rows={isMobile ? 6 : 5}
+                value={masterAiRule}
+                onChange={(e) => setMasterAiRule(e.target.value)}
+                placeholder={t('masterRulePlaceholder')}
+                style={{ ...customInputStyle, resize: 'vertical', minHeight: '120px', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {sidebarPage === 'store' && selectedUser ? (
           <div>
             {/* Top Store Header Bar */}
             <div style={{
@@ -1381,20 +1628,20 @@ export default function MasterControlPanel({ onBackToHome }) {
                     color: selectedUser.forcedPause ? '#dc2626' : ((selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669'),
                     border: `1px solid ${selectedUser.forcedPause ? '#fca5a5' : ((selectedUser.balance || 0) <= 0 ? '#fca5a5' : '#86efac')}`
                   }}>
-                    {selectedUser.forcedPause ? '⛔ Force Paused by Admin' : ((selectedUser.balance || 0) <= 0 ? 'Paused (Zero Balance)' : 'Live Active')}
+                    {selectedUser.forcedPause ? t('forcePaused') : ((selectedUser.balance || 0) <= 0 ? t('pausedZero') : t('liveActive'))}
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '14px', flexWrap: 'wrap', wordBreak: 'break-word' }}>
-                  <span>User ID: <strong>{selectedUser.id}</strong></span>
-                  <span>APK Password: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
+                  <span>{t('userId')}: <strong>{selectedUser.id}</strong></span>
+                  <span>{t('apkPassword')}: <strong>{showPasswordMap[selectedUser.id] ? selectedUser.password : '••••••••'}</strong>
                     <button 
                       onClick={() => setShowPasswordMap(prev => ({ ...prev, [selectedUser.id]: !prev[selectedUser.id] }))}
                       style={{ background: 'none', border: 'none', color: '#1d61ff', cursor: 'pointer', marginLeft: '6px', fontSize: '11px' }}
                     >
-                      {showPasswordMap[selectedUser.id] ? 'Hide' : 'Show'}
+                      {showPasswordMap[selectedUser.id] ? t('hide') : t('show')}
                     </button>
                   </span>
-                  <span>Active AI: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong></span>
+                  <span>{t('activeAi')}: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong></span>
                 </div>
               </div>
 
@@ -1457,7 +1704,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   }}
                 >
                   <Key size={13} color="#0f172a" />
-                  <span>Change Credentials</span>
+                  <span>{t('changeCredentials')}</span>
                 </button>
 
                 <button
@@ -1482,7 +1729,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   }}
                 >
                   <RefreshCw size={13} />
-                  <span>Sync APK</span>
+                  <span>{t('syncApk')}</span>
                 </button>
 
                 <button
@@ -1505,7 +1752,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   }}
                 >
                   <Trash2 size={13} />
-                  <span>Delete Store</span>
+                  <span>{t('deleteStore')}</span>
                 </button>
               </div>
             </div>
@@ -1620,13 +1867,13 @@ export default function MasterControlPanel({ onBackToHome }) {
               flexWrap: 'wrap'
             }}>
               {[
-                { id: 'profile', label: 'Store Profile & FAQ', short: 'Profile', icon: FileText },
-                { id: 'ai_keys', label: 'AI Keys & Backups', short: 'AI Keys', icon: Key },
-                { id: 'balance_history', label: 'Balance', short: 'Balance', icon: Receipt },
-                { id: 'activity', label: 'Live SMS Activity', short: 'SMS Log', icon: MessageSquare },
-                { id: 'spam_schedule', label: 'Spam & Hours', short: 'Hours', icon: Clock },
-                { id: 'pricing', label: 'Pricing & Rates', short: 'Pricing', icon: DollarSign },
-                { id: 'blacklist', label: 'Manual Reply List', short: 'Manual List', icon: Ban }
+                { id: 'profile', label: t('tabProfile'), short: t('tabProfileShort'), icon: FileText },
+                { id: 'ai_keys', label: t('tabAiKeys'), short: t('tabAiKeysShort'), icon: Key },
+                { id: 'balance_history', label: t('tabBalance'), short: t('tabBalance'), icon: Receipt },
+                { id: 'activity', label: t('tabActivity'), short: t('tabActivityShort'), icon: MessageSquare },
+                { id: 'spam_schedule', label: t('tabHours'), short: t('tabHoursShort'), icon: Clock },
+                { id: 'pricing', label: t('tabPricing'), short: t('tabPricingShort'), icon: DollarSign },
+                { id: 'blacklist', label: t('tabManual'), short: t('tabManualShort'), icon: Ban }
               ].map(tab => {
                 const isActive = activeTab === tab.id;
                 const IconComp = tab.icon;
@@ -3213,11 +3460,11 @@ export default function MasterControlPanel({ onBackToHome }) {
             )}
 
           </div>
-        ) : (
+        ) : sidebarPage === 'store' ? (
           <div style={{ textAlign: 'center', padding: isMobile ? '40px 12px' : '60px 0', color: '#94a3b8' }}>
-            {isMobile ? 'Tap the menu to select a store account.' : 'Select a store account from the left sidebar to manage controls, API keys, and live activity.'}
+            {isMobile ? t('tapMenuSelect') : t('selectStoreSidebar')}
           </div>
-        )}
+        ) : null}
 
       </main>
 
@@ -3248,7 +3495,7 @@ export default function MasterControlPanel({ onBackToHome }) {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
-                Create Store Account
+                {t('createStoreAccount')}
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}

@@ -1,0 +1,531 @@
+.clu-page {
+  min-height: 100vh;
+  background: #fff;
+  color: #111;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow-x: hidden;
+}
+
+.clu-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 8vw;
+  color: #fff;
+}
+
+.clu-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+}
+
+.clu-mark {
+  display: inline-flex;
+  color: #fff;
+}
+
+.clu-mark-dark {
+  color: #111;
+}
+
+.clu-nav-links {
+  display: flex;
+  gap: 28px;
+}
+
+.clu-nav-links a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.clu-nav-links a:hover {
+  color: #fff;
+}
+
+.clu-nav-cta {
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clu-hero {
+  position: relative;
+  min-height: 100vh;
+  padding: 110px 8vw 0;
+  overflow: hidden;
+}
+
+.clu-mountains {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.clu-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 560px;
+  margin-left: auto;
+  text-align: right;
+  color: #fff;
+}
+
+.clu-hero-copy h1 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2.6rem, 5.4vw, 4.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 16px;
+  text-shadow: 0 8px 32px rgba(20, 60, 140, 0.25);
+}
+
+.clu-hero-copy p {
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0 0 22px;
+  margin-left: auto;
+  max-width: 420px;
+}
+
+.clu-hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.clu-btn-white {
+  background: #fff;
+  color: #111;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.clu-btn-ghost {
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 11px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.clu-overlay {
+  position: relative;
+  z-index: 3;
+  width: min(420px, 92vw);
+  margin: 48px auto 80px;
+  background: rgba(18, 18, 20, 0.92);
+  color: #f4f4f5;
+  border-radius: 18px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 30px 80px rgba(8, 30, 80, 0.35);
+  backdrop-filter: blur(18px);
+}
+
+.clu-overlay-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #a1a1aa;
+  margin-bottom: 12px;
+}
+
+.clu-overlay-hide {
+  color: #e4e4e7;
+}
+
+.clu-overlay-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.clu-overlay-tabs span {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a1a1aa;
+}
+
+.clu-overlay-tabs .is-on {
+  background: #fff;
+  color: #111;
+  font-weight: 600;
+}
+
+.clu-overlay-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #71717a;
+  margin: 8px 0 4px;
+}
+
+.clu-overlay-in,
+.clu-overlay-out {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
+.clu-overlay-out {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.clu-overlay-input {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #71717a;
+  font-size: 0.82rem;
+}
+
+.clu-section {
+  padding: 88px 8vw;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.clu-muted {
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  background: #f6f7f9;
+  padding-left: max(8vw, calc((100% - 1120px) / 2));
+  padding-right: max(8vw, calc((100% - 1120px) / 2));
+}
+
+.clu-h2 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 36px;
+  color: #111;
+}
+
+.clu-h3 {
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+  margin: 0 0 10px;
+}
+
+.clu-lead,
+.clu-sub {
+  color: #52525b;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 540px;
+}
+
+.clu-sub {
+  margin: -18px 0 36px;
+}
+
+.clu-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  margin-bottom: 72px;
+}
+
+.clu-split-flip {
+  direction: rtl;
+}
+
+.clu-split-flip > * {
+  direction: ltr;
+}
+
+.clu-panel {
+  background: #111;
+  color: #fafafa;
+  border-radius: 24px;
+  padding: 28px;
+  min-height: 180px;
+}
+
+.clu-bubble {
+  display: inline-block;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 90%;
+}
+
+.clu-bubble-in {
+  background: #2563eb;
+}
+
+.clu-bubble-out {
+  background: #27272a;
+}
+
+.clu-meta {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: #a1a1aa;
+}
+
+.clu-chip {
+  margin-top: 18px;
+  font-size: 0.75rem;
+  color: #93c5fd;
+}
+
+.clu-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.clu-feature-grid h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.clu-feature-grid p {
+  margin: 0;
+  color: #52525b;
+  line-height: 1.55;
+}
+
+.clu-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.clu-stats strong {
+  display: block;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.clu-stats span {
+  color: #52525b;
+  line-height: 1.5;
+}
+
+.clu-sim-frame {
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+}
+
+.clu-sim-frame .elite-card {
+  border-radius: 28px;
+}
+
+.clu-faq {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e4e4e7;
+}
+
+.clu-faq-item {
+  border-bottom: 1px solid #e4e4e7;
+}
+
+.clu-faq-item button {
+  width: 100%;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  color: #111;
+}
+
+.clu-faq-item button svg {
+  flex-shrink: 0;
+  color: #71717a;
+  transition: transform 0.2s ease;
+}
+
+.clu-faq-item.is-open button svg {
+  transform: rotate(180deg);
+}
+
+.clu-faq-item p {
+  margin: 0 0 22px;
+  color: #52525b;
+  line-height: 1.6;
+  max-width: 720px;
+}
+
+.clu-endcta {
+  background: #0a0a0a;
+  color: #fff;
+  text-align: center;
+  padding: 96px 8vw;
+}
+
+.clu-endcta h2 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.clu-endcta p {
+  color: #a1a1aa;
+  margin: 0 0 28px;
+  font-size: 1.05rem;
+}
+
+.clu-footer {
+  padding: 56px 8vw 28px;
+  background: #fff;
+  color: #52525b;
+}
+
+.clu-footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 40px;
+}
+
+.clu-brand-foot {
+  margin-bottom: 10px;
+  color: #111;
+}
+
+.clu-footer h4 {
+  color: #111;
+  font-size: 0.82rem;
+  margin: 0 0 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.clu-footer a,
+.clu-footer-btn,
+.clu-footer span {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 8px;
+  color: #52525b;
+  text-decoration: none;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.clu-footer a:hover,
+.clu-footer-btn:hover {
+  color: #111;
+}
+
+.clu-footer-base {
+  border-top: 1px solid #e4e4e7;
+  padding-top: 18px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .clu-nav {
+    padding: 16px 20px;
+  }
+
+  .clu-nav-links {
+    display: none;
+  }
+
+  .clu-hero {
+    padding: 92px 20px 0;
+    min-height: auto;
+  }
+
+  .clu-hero-copy {
+    text-align: left;
+    margin: 0;
+    max-width: none;
+  }
+
+  .clu-hero-copy p {
+    margin-left: 0;
+  }
+
+  .clu-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .clu-overlay {
+    margin: 36px auto 48px;
+  }
+
+  .clu-section {
+    padding: 64px 20px;
+  }
+
+  .clu-muted {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .clu-split,
+  .clu-split-flip,
+  .clu-feature-grid,
+  .clu-stats,
+  .clu-footer-grid {
+    grid-template-columns: 1fr;
+    direction: ltr;
+  }
+
+  .clu-endcta {
+    padding: 64px 20px;
+  }
+}

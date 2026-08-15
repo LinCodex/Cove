@@ -1,4 +1,4 @@
-import { getAllUsersLite, getUser, saveUser, createUser, deleteUser, parseBody, applyBalanceChange, getActivities, mergeAiConfig, isRedactedSecret } from '../_db.js';
+import { getAllUsersLite, getUser, saveUser, createUser, deleteUser, parseBody, applyBalanceChange, getActivities, mergeAiConfig, isRedactedSecret, getPlatformStats } from '../_db.js';
 import { requireAdmin } from '../_adminAuth.js';
 
 export default async function handler(req, res) {
@@ -23,6 +23,10 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      if (req.query.stats === '1' || req.query.stats === 'true') {
+        const stats = await getPlatformStats();
+        return res.status(200).json({ success: true, stats });
+      }
       const userId = req.query.id || req.query.userId;
       if (userId) {
         const [user, activities] = await Promise.all([
