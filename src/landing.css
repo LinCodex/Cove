@@ -1,9 +1,19 @@
 .clu-page {
+  --ink: #111111;
+  --muted: #5c5c66;
+  --line: rgba(17, 17, 17, 0.08);
+  --card: #ffffff;
+  --wash: #f4f5f7;
+  --shadow: 0 18px 50px rgba(17, 17, 24, 0.08);
+  --radius: 22px;
+  --sans: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   min-height: 100vh;
   background: #fff;
-  color: #111;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  font-family: var(--sans);
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 .clu-nav {
@@ -17,6 +27,7 @@
   justify-content: space-between;
   padding: 22px 8vw;
   color: #fff;
+  animation: cluFade 0.8s ease both;
 }
 
 .clu-brand {
@@ -26,8 +37,8 @@
   color: inherit;
   text-decoration: none;
   font-weight: 600;
-  font-size: 1.05rem;
-  letter-spacing: -0.03em;
+  font-size: 1.08rem;
+  letter-spacing: -0.04em;
 }
 
 .clu-mark {
@@ -36,7 +47,7 @@
 }
 
 .clu-mark-dark {
-  color: #111;
+  color: var(--ink);
 }
 
 .clu-nav-links {
@@ -44,26 +55,24 @@
   gap: 28px;
 }
 
-.clu-nav-links a {
+.clu-nav-links a,
+.clu-nav-ghost {
   color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
   font-size: 0.92rem;
   font-weight: 500;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
-.clu-nav-links a:hover {
+.clu-nav-links a:hover,
+.clu-nav-ghost:hover {
   color: #fff;
 }
 
-.clu-nav-cta {
-  background: #0a0a0a;
-  color: #fff;
-  border: none;
+.clu-nav-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;
-  padding: 10px 18px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
+  padding: 8px 16px;
 }
 
 .clu-hero {
@@ -81,32 +90,38 @@
   z-index: 0;
 }
 
+.clu-peak-drift {
+  animation: cluDrift 28s ease-in-out infinite alternate;
+  transform-origin: 50% 80%;
+}
+
 .clu-hero-copy {
   position: relative;
   z-index: 2;
-  max-width: 560px;
+  max-width: 580px;
   margin-left: auto;
   text-align: right;
   color: #fff;
+  animation: cluHeroIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
 .clu-hero-copy h1 {
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(2.6rem, 5.4vw, 4.6rem);
-  line-height: 1.05;
+  font-size: clamp(2.7rem, 5.5vw, 4.7rem);
+  line-height: 1.04;
   letter-spacing: -0.03em;
   margin: 0 0 16px;
-  text-shadow: 0 8px 32px rgba(20, 60, 140, 0.25);
+  text-shadow: 0 8px 32px rgba(20, 60, 140, 0.22);
 }
 
 .clu-hero-copy p {
-  font-size: 1.02rem;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.88);
-  margin: 0 0 22px;
-  margin-left: auto;
-  max-width: 420px;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 24px auto;
+  max-width: 440px;
+  font-weight: 400;
 }
 
 .clu-hero-actions {
@@ -116,25 +131,64 @@
   flex-wrap: wrap;
 }
 
-.clu-btn-white {
-  background: #fff;
-  color: #111;
-  border: none;
+.clu-btn-white,
+.clu-btn-dark,
+.clu-apk-btn,
+.clu-btn-ghost,
+.clu-btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border-radius: 999px;
   padding: 12px 22px;
   font-weight: 600;
   font-size: 0.95rem;
+  font-family: inherit;
+  text-decoration: none;
   cursor: pointer;
+  border: none;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.clu-btn-white {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(8, 30, 80, 0.18);
+}
+
+.clu-btn-dark,
+.clu-apk-btn {
+  background: var(--ink);
+  color: #fff;
+}
+
+.clu-apk-btn {
+  padding: 11px 18px;
+  margin-bottom: 10px !important;
 }
 
 .clu-btn-ghost {
   color: #fff;
-  text-decoration: none;
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 999px;
   padding: 11px 20px;
-  font-weight: 600;
-  font-size: 0.95rem;
+}
+
+.clu-btn-quiet {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.clu-btn-white:hover,
+.clu-btn-dark:hover,
+.clu-apk-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(8, 30, 80, 0.2);
+}
+
+.clu-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .clu-overlay {
@@ -144,10 +198,16 @@
   margin: 48px auto 80px;
   background: rgba(18, 18, 20, 0.92);
   color: #f4f4f5;
-  border-radius: 18px;
-  padding: 14px 16px 16px;
+  border-radius: var(--radius);
+  padding: 16px 16px 18px;
   box-shadow: 0 30px 80px rgba(8, 30, 80, 0.35);
   backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: cluHeroIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+
+.clu-float {
+  animation: cluHeroIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both, cluBob 6.5s ease-in-out 1.4s infinite;
 }
 
 .clu-overlay-bar {
@@ -184,11 +244,12 @@
 }
 
 .clu-overlay-label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: #71717a;
   margin: 8px 0 4px;
+  font-weight: 600;
 }
 
 .clu-overlay-in,
@@ -217,46 +278,92 @@
 }
 
 .clu-section {
-  padding: 88px 8vw;
+  padding: 96px 8vw;
   max-width: 1120px;
   margin: 0 auto;
 }
 
-.clu-muted {
-  max-width: none;
-  width: 100%;
-  margin-left: 0;
-  background: #f6f7f9;
-  padding-left: max(8vw, calc((100% - 1120px) / 2));
-  padding-right: max(8vw, calc((100% - 1120px) / 2));
+.clu-band {
+  background: var(--wash);
+  padding: 96px 0;
+}
+
+.clu-band-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 8vw;
 }
 
 .clu-h2 {
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-size: clamp(2.05rem, 4vw, 3.45rem);
   letter-spacing: -0.03em;
-  line-height: 1.1;
-  margin: 0 0 36px;
-  color: #111;
+  line-height: 1.08;
+  margin: 0 0 18px;
+  color: var(--ink);
 }
 
 .clu-h3 {
-  font-size: 1.45rem;
-  letter-spacing: -0.03em;
+  font-family: var(--sans);
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.035em;
   margin: 0 0 10px;
+}
+
+.clu-kicker,
+.clu-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
 }
 
 .clu-lead,
 .clu-sub {
-  color: #52525b;
+  color: var(--muted);
   font-size: 1.05rem;
-  line-height: 1.6;
+  line-height: 1.65;
   max-width: 540px;
 }
 
 .clu-sub {
-  margin: -18px 0 36px;
+  margin: 0 0 36px;
+}
+
+.clu-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.clu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px rgba(17, 17, 24, 0.12);
+}
+
+.clu-card-inset {
+  box-shadow: none;
+  background: var(--wash);
+  padding: 18px;
+}
+
+.clu-card-dark {
+  background: #111;
+  color: #fafafa;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+}
+
+.clu-card-dark:hover {
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
 }
 
 .clu-split {
@@ -273,14 +380,6 @@
 
 .clu-split-flip > * {
   direction: ltr;
-}
-
-.clu-panel {
-  background: #111;
-  color: #fafafa;
-  border-radius: 24px;
-  padding: 28px;
-  min-height: 180px;
 }
 
 .clu-bubble {
@@ -312,61 +411,354 @@
   color: #93c5fd;
 }
 
-.clu-feature-grid {
+.clu-tier-grid,
+.clu-pay-grid,
+.clu-feature-grid,
+.clu-stats {
   display: grid;
+  gap: 16px;
+}
+
+.clu-tier-grid,
+.clu-pay-grid,
+.clu-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.clu-feature-grid,
+.clu-stats {
   grid-template-columns: repeat(3, 1fr);
-  gap: 28px;
+}
+
+.clu-tier {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.clu-tier strong {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  margin: 8px 0 4px;
+}
+
+.clu-tier em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.02rem;
+  margin-bottom: 8px;
+}
+
+.clu-tier p {
+  margin: auto 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.clu-tier-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.clu-tier.is-featured {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.clu-tier.is-featured p,
+.clu-tier.is-featured .clu-tier-tag {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.clu-pay {
+  margin-top: 48px;
+}
+
+.clu-pay-card {
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.clu-pay-card span {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.clu-pay-card small {
+  color: var(--muted);
+  margin-top: 4px;
 }
 
 .clu-feature-grid h3 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.12rem;
+  letter-spacing: -0.03em;
 }
 
-.clu-feature-grid p {
+.clu-feature-grid p,
+.clu-stats span {
   margin: 0;
-  color: #52525b;
+  color: var(--muted);
   line-height: 1.55;
-}
-
-.clu-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
 }
 
 .clu-stats strong {
   display: block;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.4vw, 2.8rem);
   font-weight: 400;
   letter-spacing: -0.03em;
   margin-bottom: 8px;
 }
 
-.clu-stats span {
-  color: #52525b;
-  line-height: 1.5;
+.clu-sim {
+  padding: 28px;
 }
 
-.clu-sim-frame {
-  border-radius: 28px;
+.clu-sim:hover {
+  transform: none;
+}
+
+.clu-sim-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.clu-wallet-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 14px;
+  flex-shrink: 0;
+}
+
+.clu-wallet-pill small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.clu-wallet-pill strong {
+  font-size: 1rem;
+}
+
+.clu-sim-grid {
+  display: grid;
+  grid-template-columns: 0.95fr 1.25fr;
+  gap: 16px;
+}
+
+.clu-sim-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clu-persona-list,
+.clu-sample-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clu-persona,
+.clu-sample {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.clu-persona:hover,
+.clu-sample:hover,
+.clu-persona.is-on {
+  border-color: var(--ink);
+  transform: translateX(2px);
+}
+
+.clu-persona strong,
+.clu-sample span {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.clu-persona small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.clu-terminal {
+  padding: 0;
   overflow: hidden;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
 }
 
-.clu-sim-frame .elite-card {
-  border-radius: 28px;
+.clu-terminal:hover {
+  transform: none;
+}
+
+.clu-terminal-top,
+.clu-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.clu-terminal-bar {
+  border-bottom: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
+}
+
+.clu-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.15);
+  animation: cluPulse 2s ease-in-out infinite;
+}
+
+.clu-clear {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.clu-terminal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.clu-msg small {
+  display: block;
+  color: #a1a1aa;
+  font-size: 0.7rem;
+  margin-bottom: 4px;
+}
+
+.clu-msg p {
+  margin: 0;
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.clu-msg.is-in {
+  align-self: flex-end;
+  text-align: right;
+}
+
+.clu-msg.is-in p {
+  margin-left: auto;
+  background: #2563eb;
+}
+
+.clu-msg.is-out p {
+  background: #27272a;
+}
+
+.clu-msg em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #86efac;
+}
+
+.clu-empty,
+.clu-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a1a1aa;
+  font-size: 0.85rem;
+}
+
+.clu-empty {
+  flex-direction: column;
+  justify-content: center;
+  min-height: 220px;
+  text-align: center;
+}
+
+.clu-thinking svg {
+  animation: cluSpin 1s linear infinite;
+}
+
+.clu-terminal-bar input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #fff;
+  padding: 10px 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.clu-terminal-bar button {
+  background: #fff;
+  color: #111;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.clu-terminal-bar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .clu-faq {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid #e4e4e7;
+  border-top: 1px solid var(--line);
 }
 
 .clu-faq-item {
-  border-bottom: 1px solid #e4e4e7;
+  border-bottom: 1px solid var(--line);
 }
 
 .clu-faq-item button {
@@ -379,38 +771,40 @@
   gap: 16px;
   padding: 22px 0;
   font-size: 1.05rem;
-  font-weight: 500;
+  font-weight: 550;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
-  color: #111;
+  color: var(--ink);
 }
 
 .clu-faq-item button svg {
   flex-shrink: 0;
-  color: #71717a;
-  transition: transform 0.2s ease;
+  color: var(--muted);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .clu-faq-item.is-open button svg {
   transform: rotate(180deg);
 }
 
-.clu-faq-item p {
+.clu-faq-body p {
   margin: 0 0 22px;
-  color: #52525b;
-  line-height: 1.6;
+  color: var(--muted);
+  line-height: 1.65;
   max-width: 720px;
+  animation: cluFadeUp 0.35s ease both;
 }
 
 .clu-endcta {
   background: #0a0a0a;
   color: #fff;
   text-align: center;
-  padding: 96px 8vw;
+  padding: 104px 8vw;
 }
 
 .clu-endcta h2 {
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--serif);
   font-weight: 400;
   font-size: clamp(2rem, 4vw, 3.2rem);
   letter-spacing: -0.03em;
@@ -419,60 +813,266 @@
 
 .clu-endcta p {
   color: #a1a1aa;
-  margin: 0 0 28px;
+  margin: 0 auto 28px;
   font-size: 1.05rem;
+  max-width: 520px;
+  line-height: 1.55;
 }
 
 .clu-footer {
   padding: 56px 8vw 28px;
   background: #fff;
-  color: #52525b;
+  color: var(--muted);
 }
 
 .clu-footer-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr 1fr;
   gap: 32px;
   margin-bottom: 40px;
 }
 
 .clu-brand-foot {
   margin-bottom: 10px;
-  color: #111;
+  color: var(--ink);
 }
 
 .clu-footer h4 {
-  color: #111;
-  font-size: 0.82rem;
+  color: var(--ink);
+  font-size: 0.78rem;
   margin: 0 0 12px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .clu-footer a,
-.clu-footer-btn,
 .clu-footer span {
   display: block;
   background: none;
   border: none;
   padding: 0;
   margin: 0 0 8px;
-  color: #52525b;
+  color: var(--muted);
   text-decoration: none;
   font-size: 0.92rem;
   text-align: left;
   cursor: pointer;
+  font-family: inherit;
 }
 
-.clu-footer a:hover,
-.clu-footer-btn:hover {
-  color: #111;
+.clu-footer a:hover {
+  color: var(--ink);
 }
 
 .clu-footer-base {
-  border-top: 1px solid #e4e4e7;
+  border-top: 1px solid var(--line);
   padding-top: 18px;
   font-size: 0.8rem;
+}
+
+.clu-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(10, 10, 12, 0.45);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cluFade 0.25s ease both;
+}
+
+.clu-modal {
+  width: min(440px, 100%);
+  padding: 36px 28px 28px;
+  position: relative;
+  animation: cluPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.clu-modal:hover {
+  transform: none;
+}
+
+.clu-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--wash);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clu-modal-head {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.clu-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--wash);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.clu-modal-head h3 {
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin: 0 0 8px;
+}
+
+.clu-modal-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.clu-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clu-modal-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0 14px;
+}
+
+.clu-modal-field input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 14px 0;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.clu-modal-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.clu-modal-note.is-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.clu-modal-note.is-ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.clu-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.clu-btn-dark:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.clu-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.clu-reveal.is-in {
+  animation: cluRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes cluFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cluFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cluHeroIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cluRise {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cluPop {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes cluBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes cluDrift {
+  from { transform: translateX(0) scale(1); }
+  to { transform: translateX(-18px) scale(1.02); }
+}
+
+@keyframes cluPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes cluSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clu-reveal,
+  .clu-hero-copy,
+  .clu-overlay,
+  .clu-nav,
+  .clu-peak-drift,
+  .clu-float,
+  .clu-faq-body p,
+  .clu-modal,
+  .clu-modal-backdrop {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .clu-card,
+  .clu-btn-white,
+  .clu-btn-dark,
+  .clu-apk-btn,
+  .clu-persona {
+    transition: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -507,25 +1107,39 @@
     margin: 36px auto 48px;
   }
 
-  .clu-section {
-    padding: 64px 20px;
+  .clu-section,
+  .clu-band {
+    padding: 72px 0;
   }
 
-  .clu-muted {
+  .clu-section {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .clu-band-inner {
+    padding: 0 20px;
   }
 
   .clu-split,
   .clu-split-flip,
   .clu-feature-grid,
   .clu-stats,
-  .clu-footer-grid {
+  .clu-tier-grid,
+  .clu-pay-grid,
+  .clu-footer-grid,
+  .clu-sim-grid {
     grid-template-columns: 1fr;
     direction: ltr;
   }
 
+  .clu-sim-head,
+  .clu-modal-actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
   .clu-endcta {
-    padding: 64px 20px;
+    padding: 72px 20px;
   }
 }

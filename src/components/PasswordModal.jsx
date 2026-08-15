@@ -16,7 +16,7 @@ export default function PasswordModal({ isOpen, onClose }) {
     if (password.trim() === expectedPassword) {
       setError('');
       setSuccess(true);
-      
+
       confetti({
         particleCount: 120,
         spread: 80,
@@ -24,7 +24,6 @@ export default function PasswordModal({ isOpen, onClose }) {
       });
 
       setTimeout(() => {
-        // Trigger APK download
         const link = document.createElement('a');
         link.href = '/cove-app.apk';
         link.download = 'cove-autoresponder-v1.0.apk';
@@ -44,72 +43,56 @@ export default function PasswordModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
-        
-        {/* Close Button */}
-        <button onClick={onClose} className="modal-close-btn" aria-label="Close modal">
+    <div className="clu-modal-backdrop" onClick={onClose}>
+      <div className="clu-card clu-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-labelledby="clu-modal-title">
+        <button onClick={onClose} className="clu-modal-close" aria-label="Close">
           <X size={18} />
         </button>
 
-        {/* Modal Header */}
-        <div className="modal-header">
-          <div className="modal-icon-badge">
-            <Lock size={20} className="text-blue-400" />
+        <div className="clu-modal-head">
+          <div className="clu-modal-icon">
+            <Lock size={18} />
           </div>
-          <h3 className="modal-title">Access APK Download</h3>
-          <p className="modal-subtitle">
-            This build is password-protected. Enter your authorized access key to download the APK.
-          </p>
+          <h3 id="clu-modal-title">Get the APK</h3>
+          <p>This build is password-protected. Enter your access key to download.</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleVerifyAndDownload} className="modal-form">
-          <div className="input-wrapper">
-            <Key size={16} className="input-icon" />
-            <input 
+        <form onSubmit={handleVerifyAndDownload} className="clu-modal-form">
+          <div className="clu-modal-field">
+            <Key size={16} />
+            <input
               type="password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              placeholder="Enter access password..."
-              className="modal-input"
+              placeholder="Access password"
               autoFocus
             />
           </div>
 
           {error && (
-            <div className="modal-error">
+            <div className="clu-modal-note is-error">
               <AlertCircle size={14} />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="modal-success">
+            <div className="clu-modal-note is-ok">
               <CheckCircle size={14} />
-              <span>Access granted! Downloading APK package...</span>
+              <span>Access granted. Downloading…</span>
             </div>
           )}
 
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="modal-btn-cancel"
-            >
+          <div className="clu-modal-actions">
+            <button type="button" onClick={onClose} className="clu-btn-quiet">
               Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={!password.trim() || success}
-              className="modal-btn-submit"
-            >
+            <button type="submit" disabled={!password.trim() || success} className="clu-btn-dark">
               <Download size={16} />
-              <span>{success ? 'Downloading...' : 'Unlock & Download'}</span>
+              <span>{success ? 'Downloading…' : 'Download APK'}</span>
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

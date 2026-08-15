@@ -36,13 +36,6 @@ export default function App() {
   }
 
   return (
-    <LandingPage
-      onOpenMasterControl={() => {
-        setViewMasterControl(true);
-        if (window.history.pushState) {
-          window.history.pushState({}, '', '/mastercontrol');
-        }
-      }}
-    />
+    <LandingPage />
   );
 }
