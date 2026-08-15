@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Send, RefreshCw, Sparkles, Zap, Wallet } from 'lucide-react';
 
 const RATE = 0.005;
 
@@ -12,7 +11,6 @@ export default function InteractiveSimulatorCard() {
   const personas = {
     bakery: {
       name: 'Artisanal Bakery',
-      icon: '🥖',
       rules: 'Open 7AM–6PM Mon–Sat. Bulk orders need 24h notice.',
       samples: [
         'What time do you open tomorrow morning?',
@@ -22,7 +20,6 @@ export default function InteractiveSimulatorCard() {
     },
     services: {
       name: 'Consulting & Intake',
-      icon: '💼',
       rules: 'Mon–Fri 9AM–5PM. Emergency line: 1-800-555-COVE.',
       samples: [
         'How do I schedule a 30-min strategy session?',
@@ -32,7 +29,6 @@ export default function InteractiveSimulatorCard() {
     },
     realestate: {
       name: 'Real Estate Broker',
-      icon: '🏡',
       rules: 'Showings Saturday 1–4PM. Collect email and budget.',
       samples: [
         'Is 402 Ocean Drive open for viewing this weekend?',
@@ -122,7 +118,6 @@ export default function InteractiveSimulatorCard() {
           <p className="clu-lead">Send a sample SMS. Cove drafts a reply and deducts $0.005 from the demo wallet.</p>
         </div>
         <div className="clu-wallet-pill">
-          <Wallet size={16} />
           <div>
             <small>Demo wallet</small>
             <strong>${walletBalance.toFixed(3)}</strong>
@@ -145,7 +140,6 @@ export default function InteractiveSimulatorCard() {
                     onClick={() => { setSelectedPersona(key); setMessages([]); }}
                     className={`clu-persona ${on ? 'is-on' : ''}`}
                   >
-                    <span>{p.icon}</span>
                     <div>
                       <strong>{p.name}</strong>
                       <small>{p.rules}</small>
@@ -162,7 +156,6 @@ export default function InteractiveSimulatorCard() {
               {current.samples.map((s) => (
                 <button key={s} type="button" onClick={() => handleSend(s)} className="clu-sample">
                   <span>“{s}”</span>
-                  <Send size={12} />
                 </button>
               ))}
             </div>
@@ -171,16 +164,14 @@ export default function InteractiveSimulatorCard() {
 
         <div className="clu-card clu-card-dark clu-terminal">
           <div className="clu-terminal-top">
-            <span className="clu-dot" />
             <span>Auto-reply</span>
             <button type="button" onClick={() => setMessages([])} className="clu-clear">
-              <RefreshCw size={12} /> Clear
+              Clear
             </button>
           </div>
           <div className="clu-terminal-body">
             {messages.length === 0 ? (
               <div className="clu-empty">
-                <Sparkles size={22} />
                 <span>Send a test SMS to see a $0.005 deduction.</span>
               </div>
             ) : (
@@ -193,10 +184,7 @@ export default function InteractiveSimulatorCard() {
               ))
             )}
             {isProcessing && (
-              <div className="clu-thinking">
-                <Zap size={14} />
-                Matching rules…
-              </div>
+              <div className="clu-thinking">Matching rules…</div>
             )}
           </div>
           <div className="clu-terminal-bar">

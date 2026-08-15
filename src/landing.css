@@ -82,7 +82,7 @@
   overflow: hidden;
 }
 
-.clu-mountains {
+.clu-hero-bg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -90,9 +90,13 @@
   z-index: 0;
 }
 
-.clu-peak-drift {
-  animation: cluDrift 28s ease-in-out infinite alternate;
-  transform-origin: 50% 80%;
+.clu-signal-drift {
+  transform-origin: 360px 430px;
+  animation: cluPulseRings 7s ease-in-out infinite;
+}
+
+.clu-bubble-drift {
+  animation: cluDrift 22s ease-in-out infinite alternate;
 }
 
 .clu-hero-copy {
@@ -637,25 +641,14 @@
   margin-top: auto;
 }
 
-.clu-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.15);
-  animation: cluPulse 2s ease-in-out infinite;
-}
-
 .clu-clear {
   margin-left: auto;
   background: transparent;
   border: none;
   color: #a1a1aa;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
   cursor: pointer;
   font-family: inherit;
+  font-size: 0.85rem;
 }
 
 .clu-terminal-body {
@@ -718,10 +711,6 @@
   justify-content: center;
   min-height: 220px;
   text-align: center;
-}
-
-.clu-thinking svg {
-  animation: cluSpin 1s linear infinite;
 }
 
 .clu-terminal-bar input {
@@ -1042,13 +1031,9 @@
   to { transform: translateX(-18px) scale(1.02); }
 }
 
-@keyframes cluPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
-}
-
-@keyframes cluSpin {
-  to { transform: rotate(360deg); }
+@keyframes cluPulseRings {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.045); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1056,7 +1041,8 @@
   .clu-hero-copy,
   .clu-overlay,
   .clu-nav,
-  .clu-peak-drift,
+  .clu-signal-drift,
+  .clu-bubble-drift,
   .clu-float,
   .clu-faq-body p,
   .clu-modal,

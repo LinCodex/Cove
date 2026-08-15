@@ -95,36 +95,56 @@ export default function LandingPage() {
       </header>
 
       <section className="clu-hero">
-        <svg className="clu-mountains" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" aria-hidden>
+        <svg className="clu-hero-bg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" aria-hidden>
           <defs>
             <linearGradient id="cluSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" />
-              <stop offset="42%" stopColor="#7EB6FF" />
-              <stop offset="72%" stopColor="#C5DEFF" />
+              <stop offset="0%" stopColor="#2563EB" />
+              <stop offset="38%" stopColor="#5B9FFF" />
+              <stop offset="70%" stopColor="#C5DEFF" />
               <stop offset="100%" stopColor="#FFFFFF" />
-            </linearGradient>
-            <linearGradient id="cluPeak" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#EEF6FF" />
-              <stop offset="35%" stopColor="#6BA4F5" />
-              <stop offset="100%" stopColor="#3E7EE8" />
-            </linearGradient>
-            <linearGradient id="cluPeak2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F7FBFF" />
-              <stop offset="40%" stopColor="#8BB8F8" />
-              <stop offset="100%" stopColor="#4F8AE8" />
             </linearGradient>
             <linearGradient id="cluFog" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-              <stop offset="55%" stopColor="rgba(255,255,255,0.7)" />
+              <stop offset="55%" stopColor="rgba(255,255,255,0.72)" />
               <stop offset="100%" stopColor="#FFFFFF" />
+            </linearGradient>
+            <linearGradient id="cluBubbleA" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.38)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0.12)" />
+            </linearGradient>
+            <linearGradient id="cluBubbleB" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+              <stop offset="100%" stopColor="rgba(191,219,254,0.2)" />
             </linearGradient>
           </defs>
           <rect width="1440" height="900" fill="url(#cluSky)" />
-          <g className="clu-peak-drift">
-            <path fill="url(#cluPeak2)" opacity="0.85" d="M-40 620 L180 340 L310 470 L470 250 L620 430 L790 210 L980 455 L1180 280 L1440 520 L1480 900 L-40 900 Z" />
-            <path fill="url(#cluPeak)" d="M-20 700 L140 410 L260 560 L420 300 L560 490 L720 260 L900 500 L1080 330 L1280 540 L1460 380 L1520 900 L-20 900 Z" />
-            <path fill="#2F6FD6" opacity="0.35" d="M-40 760 L220 520 L380 640 L540 470 L760 680 L980 500 L1200 670 L1460 540 L1480 900 L-40 900 Z" />
+
+          <g className="clu-signal-drift" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2">
+            <circle cx="360" cy="430" r="70" />
+            <circle cx="360" cy="430" r="140" />
+            <circle cx="360" cy="430" r="220" />
+            <circle cx="360" cy="430" r="310" className="clu-ring-slow" />
+            <circle cx="360" cy="430" r="410" className="clu-ring-slower" />
           </g>
+          <circle cx="360" cy="430" r="18" fill="rgba(255,255,255,0.9)" />
+          <circle cx="360" cy="430" r="8" fill="#1D4ED8" />
+
+          <g className="clu-bubble-drift" fill="url(#cluBubbleA)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2">
+            <path d="M168 214h210a28 28 0 0 1 28 28v78a28 28 0 0 1-28 28H214l-34 26v-26h-12a28 28 0 0 1-28-28v-78a28 28 0 0 1 28-28z" />
+            <path d="M980 168h250a28 28 0 0 1 28 28v86a28 28 0 0 1-28 28h-36v24l-32-24H980a28 28 0 0 1-28-28v-86a28 28 0 0 1 28-28z" fill="url(#cluBubbleB)" />
+            <path d="M118 520h176a24 24 0 0 1 24 24v62a24 24 0 0 1-24 24H164l-28 22v-22h-18a24 24 0 0 1-24-24v-62a24 24 0 0 1 24-24z" />
+            <path d="M760 560h230a26 26 0 0 1 26 26v74a26 26 0 0 1-26 26h-40v22l-30-22H760a26 26 0 0 1-26-26v-74a26 26 0 0 1 26-26z" fill="url(#cluBubbleB)" />
+          </g>
+          <g fill="rgba(255,255,255,0.55)">
+            <rect x="196" y="248" width="132" height="8" rx="4" />
+            <rect x="196" y="268" width="96" height="8" rx="4" opacity="0.7" />
+            <rect x="1008" y="204" width="154" height="8" rx="4" />
+            <rect x="1008" y="224" width="118" height="8" rx="4" opacity="0.7" />
+            <rect x="142" y="552" width="108" height="7" rx="3.5" />
+            <rect x="788" y="598" width="150" height="8" rx="4" />
+            <rect x="788" y="618" width="92" height="8" rx="4" opacity="0.7" />
+          </g>
+
           <rect y="520" width="1440" height="380" fill="url(#cluFog)" />
         </svg>
 
