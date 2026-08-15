@@ -1,5 +1,6 @@
 import React from 'react';
-import { Zap, ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Lock } from 'lucide-react';
+import CoveLogo from './CoveLogo';
 
 export default function TopHeroCard({ onOpenDownloadModal }) {
   return (
@@ -10,7 +11,7 @@ export default function TopHeroCard({ onOpenDownloadModal }) {
         {/* Brand Logo */}
         <div className="elite-logo">
           <div className="elite-logo-icon">
-            <Zap size={14} className="text-white fill-current" />
+            <CoveLogo variant="gradient" size={22} />
           </div>
           <span className="elite-logo-text">COVE.</span>
         </div>

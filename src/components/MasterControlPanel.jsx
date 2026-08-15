@@ -43,6 +43,7 @@ import {
   PauseCircle
 } from 'lucide-react';
 import { translate } from '../i18n';
+import CoveLogo from './CoveLogo';
 
 const CONTROL_FONT = "'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -974,6 +975,9 @@ export default function MasterControlPanel({ onBackToHome }) {
           boxShadow: '0 20px 40px rgba(0,0,0,0.04)',
           textAlign: 'center'
         }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+            <CoveLogo variant="gradient" size={48} title="Cove" />
+          </div>
           <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.3px' }}>
             {t('coveMasterControl')}
           </h2>
@@ -1204,7 +1208,8 @@ export default function MasterControlPanel({ onBackToHome }) {
         {/* Sidebar Header */}
         <div style={{ padding: '20px 16px 14px 16px', borderBottom: '1px solid #f1f5f9' }}>
           <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.3px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.3px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <CoveLogo variant="gradient" size={26} />
               {t('coveControl')}
             </span>
             {isMobile && (

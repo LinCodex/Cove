@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InteractiveSimulatorCard from './InteractiveSimulatorCard';
 import PasswordModal from './PasswordModal';
+import CoveLogo from './CoveLogo';
 import '../landing.css';
 
 const FAQS = [
@@ -47,11 +48,7 @@ const PAYMENTS = [
 function CoveMark({ dark }) {
   return (
     <span className={`clu-mark ${dark ? 'clu-mark-dark' : ''}`}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M12 5.5v13M5.5 12h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        <circle cx="12" cy="12" r="2.4" fill="currentColor" />
-      </svg>
+      <CoveLogo variant={dark ? 'gradient' : 'current'} size={32} />
     </span>
   );
 }

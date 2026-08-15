@@ -31,8 +31,13 @@ export default function Navbar() {
         {/* Brand Logo (Matching reference 4-petal clover emblem) */}
         <a href="#" className="flex items-center gap-2.5 text-decoration-none group">
           <div className="w-8 h-8 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-7 h-7 text-white fill-current group-hover:scale-105 transition-transform">
-              <path d="M50 32 C43 20 28 20 22 28 C16 36 20 48 32 50 C20 52 16 64 22 72 C28 80 43 80 50 68 C57 80 72 80 78 72 C84 64 80 52 68 50 C80 48 84 36 78 28 C72 20 57 20 50 32 Z" />
+            <svg viewBox="0 0 96 72" className="w-8 h-6 text-white fill-current group-hover:scale-105 transition-transform">
+              <g fill="currentColor">
+                <path fillRule="evenodd" d="M20 10H48A14 14 0 0 1 62 24v14A14 14 0 0 1 48 52H24L10 66l6-14h4A14 14 0 0 1 6 38V24A14 14 0 0 1 20 10ZM22 36m-3.6 0a3.6 3.6 0 1 1 7.2 0a3.6 3.6 0 1 1-7.2 0ZM34 36m-3.6 0a3.6 3.6 0 1 1 7.2 0a3.6 3.6 0 1 1-7.2 0ZM46 36m-3.6 0a3.6 3.6 0 1 1 7.2 0a3.6 3.6 0 1 1-7.2 0Z" />
+                <rect x="68" y="22" width="18" height="6" rx="3" />
+                <rect x="68" y="33" width="24" height="6" rx="3" />
+                <rect x="68" y="44" width="18" height="6" rx="3" />
+              </g>
             </svg>
           </div>
           <span className="text-xl font-bold tracking-tight text-white font-['Plus_Jakarta_Sans']">Cove</span>

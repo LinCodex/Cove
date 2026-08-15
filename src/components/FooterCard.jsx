@@ -1,5 +1,6 @@
 import React from 'react';
-import { Zap, Shield, Terminal, Lock, Download } from 'lucide-react';
+import { Shield, Terminal, Lock, Download } from 'lucide-react';
+import CoveLogo from './CoveLogo';
 
 export default function FooterCard({ onOpenDownloadModal }) {
   return (
@@ -13,7 +14,7 @@ export default function FooterCard({ onOpenDownloadModal }) {
           <div className="footer-brand-col">
             <div className="elite-logo">
               <div className="elite-logo-icon">
-                <Zap size={14} className="text-white fill-current" />
+                <CoveLogo variant="gradient" size={22} />
               </div>
               <span className="elite-logo-text">COVE.</span>
             </div>

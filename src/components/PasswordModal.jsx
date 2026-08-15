@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Key, Download, X, AlertCircle, CheckCircle } from 'lucide-react';
+import CoveLogo from './CoveLogo';
+import { Key, Download, X, AlertCircle, CheckCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function PasswordModal({ isOpen, onClose }) {
@@ -26,7 +27,7 @@ export default function PasswordModal({ isOpen, onClose }) {
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = '/cove-app.apk';
-        link.download = 'cove-autoresponder-v1.0.apk';
+        link.download = 'cove-autoresponder-v1.0.4.apk';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -51,7 +52,7 @@ export default function PasswordModal({ isOpen, onClose }) {
 
         <div className="clu-modal-head">
           <div className="clu-modal-icon">
-            <Lock size={18} />
+            <CoveLogo variant="gradient" size={28} />
           </div>
           <h3 id="clu-modal-title">Get the APK</h3>
           <p>The APK is currently for beta users only. Please enter the access password that was shared with you.</p>
