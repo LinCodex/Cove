@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import { translate } from '../i18n';
 
+const CONTROL_FONT = "'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 const PROVIDER_DEFAULTS = {
   GEMINI: {
     name: 'Google Gemini',
@@ -958,7 +960,7 @@ export default function MasterControlPanel({ onBackToHome }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: isMobile ? '16px' : '20px',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: CONTROL_FONT,
         overflowX: 'hidden',
         boxSizing: 'border-box'
       }}>
@@ -1048,14 +1050,17 @@ export default function MasterControlPanel({ onBackToHome }) {
       maxWidth: '100vw',
       backgroundColor: '#f8fafc',
       color: '#0f172a',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      fontFamily: CONTROL_FONT,
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
       overflowX: 'hidden',
       boxSizing: 'border-box'
     }}>
-      <style>{`
+        <style>{`
         html, body, #root { max-width: 100%; overflow-x: hidden; }
+        input, textarea, button, select, table {
+          font-family: inherit !important;
+        }
         @media (max-width: 768px) {
           html, body { overflow-x: hidden; }
         }
@@ -1676,7 +1681,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     ...tapBtn
                   }}
                 >
-                  {selectedUser.forcedPause ? 'Resume Auto-Reply' : 'Force Pause APK'}
+                  {selectedUser.forcedPause ? t('resumeAutoReply') : t('forcePauseApk')}
                 </button>
 
                 <button
@@ -1766,12 +1771,12 @@ export default function MasterControlPanel({ onBackToHome }) {
               <div style={kpiCardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>
-                    Account Balance
+                    {t('accountBalance')}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     <button onClick={() => handleUpdateBalance(5.00)} style={pillBtnStyle}>+$5</button>
                     <button onClick={() => handleUpdateBalance(20.00)} style={pillBtnStyle}>+$20</button>
-                    <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>Set $0</button>
+                    <button onClick={handleSetZeroBalance} style={{ ...pillBtnStyle, color: '#dc2626' }}>{t('setZero')}</button>
                   </div>
                 </div>
 
@@ -1803,9 +1808,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                       if (!isNaN(val) && val > 0) handleUpdateBalance(val);
                     }}
                     style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#059669', flex: isMobile ? 1 : undefined, ...tapBtn }}
-                    title="Add amount to balance"
+                    title={t('titleAddAmount')}
                   >
-                    + Add
+                    {t('addBtn')}
                   </button>
                   <button
                     onClick={() => {
@@ -1813,9 +1818,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                       if (!isNaN(val) && val > 0) handleUpdateBalance(-val);
                     }}
                     style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#dc2626', flex: isMobile ? 1 : undefined, ...tapBtn }}
-                    title="Deduct amount from balance"
+                    title={t('titleDeductAmount')}
                   >
-                    - Deduct
+                    {t('deductBtn')}
                   </button>
                   <button
                     onClick={() => {
@@ -1823,9 +1828,9 @@ export default function MasterControlPanel({ onBackToHome }) {
                       if (!isNaN(val) && val >= 0) handleSetExactBalance(val);
                     }}
                     style={{ ...solidPrimaryBtnStyle, padding: '7px 10px', fontSize: '11px', background: '#0f172a', flex: isMobile ? 1 : undefined, ...tapBtn }}
-                    title="Set balance to exact amount"
+                    title={t('titleSetExact')}
                   >
-                    Set Exact
+                    {t('setExact')}
                   </button>
                 </div>
               </div>
@@ -1833,26 +1838,26 @@ export default function MasterControlPanel({ onBackToHome }) {
               {/* Card 2: Total SMS Handled */}
               <div style={kpiCardStyle}>
                 <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Total SMS Handled
+                  {t('totalSmsHandled')}
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
                   {selectedUser.activities?.length || 0}
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  Primary Provider: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong>
+                  {t('primaryProviderLabel')}: <strong>{selectedUser.aiConfig?.provider || 'Gemini'}</strong>
                 </div>
               </div>
 
               {/* Card 3: Total Cost & Tokens */}
               <div style={kpiCardStyle}>
                 <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Revenue & Token Usage
+                  {t('revenueTokenUsage')}
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
                   ${(selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0) || 0).toFixed(4)}
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  Total Tokens: {selectedUser.activities?.reduce((sum, a) => sum + (a.tokensIn || 0) + (a.tokensOut || 0), 0) || 0}
+                  {t('totalTokensLabel')}: {selectedUser.activities?.reduce((sum, a) => sum + (a.tokensIn || 0) + (a.tokensOut || 0), 0) || 0}
                 </div>
               </div>
             </div>
@@ -1913,16 +1918,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      Store Identity & AI FAQ Knowledge
+                      {t('profileTitle')}
                     </h3>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                      Configure business profile, services, and FAQ rules for automated customer replies.
+                      {t('profileDesc')}
                     </p>
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={formLabelStyle}>Store / Business Name</label>
+                  <label style={formLabelStyle}>{t('storeBusinessName')}</label>
                   <input
                     type="text"
                     value={profileDraft.storeName || ''}
@@ -1930,13 +1935,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                       setEditFlags(prev => ({ ...prev, profile: true }));
                       setProfileDraft(prev => ({ ...prev, storeName: e.target.value }));
                     }}
-                    placeholder="e.g. Downtown Bakery"
+                    placeholder={t('phStoreName')}
                     style={customInputStyle}
                   />
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={formLabelStyle}>Business Details, Services & FAQ Knowledge Base</label>
+                  <label style={formLabelStyle}>{t('businessFaqLabel')}</label>
                   <textarea
                     rows={4}
                     value={profileDraft.businessInfo || ''}
@@ -1944,27 +1949,27 @@ export default function MasterControlPanel({ onBackToHome }) {
                       setEditFlags(prev => ({ ...prev, profile: true }));
                       setProfileDraft(prev => ({ ...prev, businessInfo: e.target.value }));
                     }}
-                    placeholder="e.g. Open Mon-Sat 9AM-7PM. Specializing in organic artisan sourdough..."
+                    placeholder={t('phBusinessFaq')}
                     style={{ ...customInputStyle, resize: 'vertical' }}
                   />
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={formLabelStyle}>AI Reply Tone</label>
-                  <input
-                    type="text"
+                  <label style={formLabelStyle}>{t('aiToneLabel')}</label>
+                  <textarea
+                    rows={3}
                     value={profileDraft.replyTone || ''}
                     onChange={(e) => {
                       setEditFlags(prev => ({ ...prev, profile: true }));
                       setProfileDraft(prev => ({ ...prev, replyTone: e.target.value }));
                     }}
-                    placeholder="Professional, friendly, and concise"
-                    style={customInputStyle}
+                    placeholder={t('phAiTone')}
+                    style={{ ...customInputStyle, resize: 'vertical', minHeight: '84px' }}
                   />
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={formLabelStyle}>Strict Rules & Limitations</label>
+                  <label style={formLabelStyle}>{t('strictRulesLabel')}</label>
                   <textarea
                     rows={2}
                     value={profileDraft.aiRules || ''}
@@ -1972,7 +1977,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       setEditFlags(prev => ({ ...prev, profile: true }));
                       setProfileDraft(prev => ({ ...prev, aiRules: e.target.value }));
                     }}
-                    placeholder="e.g. Never guarantee discounts without manager approval."
+                    placeholder={t('phStrictRules')}
                     style={{ ...customInputStyle, resize: 'vertical' }}
                   />
                 </div>
@@ -1983,7 +1988,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     disabled={profileSaving} 
                     style={{ ...solidPrimaryBtnStyle, opacity: profileSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
-                    {profileSaving ? 'Saving & Syncing...' : 'Save Store Profile & Sync to APK'}
+                    {profileSaving ? t('savingSync') : t('saveProfile')}
                   </button>
                 </div>
               </div>
@@ -1995,10 +2000,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      AI Provider & Backup API Key Chain
+                      {t('aiKeysTitle')}
                     </h3>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                      Configure this store's primary AI engine and up to 5 automatic fallback keys.
+                      {t('aiKeysDesc')}
                     </p>
                   </div>
                 </div>
@@ -2010,13 +2015,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <Zap size={14} color="#ffffff" />
                     </div>
                     <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                      Primary AI Provider
+                      {t('primaryProvider')}
                     </span>
                   </div>
 
                   {/* Provider Selector Chips */}
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={formLabelStyle}>Select Primary Engine</label>
+                    <label style={formLabelStyle}>{t('selectPrimaryEngine')}</label>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {Object.keys(PROVIDER_DEFAULTS).map(provKey => {
                         const isSelected = aiDraft.provider === provKey;
@@ -2055,11 +2060,11 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                   {/* Primary API Key */}
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={formLabelStyle}>Primary API Key ({aiDraft.provider})</label>
+                    <label style={formLabelStyle}>{t('primaryApiKey')} ({aiDraft.provider})</label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <input
                         type={showKeyMap['primary'] ? 'text' : 'password'}
-                        placeholder={PROVIDER_DEFAULTS[aiDraft.provider]?.placeholder || 'Enter API Key...'}
+                        placeholder={PROVIDER_DEFAULTS[aiDraft.provider]?.placeholder || t('enterApiKey')}
                         value={aiDraft.apiKey || ''}
                         onChange={(e) => {
                           setEditFlags(prev => ({ ...prev, ai: true }));
@@ -2087,7 +2092,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   {/* Model & Base URL Overrides */}
                   <div style={{ ...colGrid(220, 12), marginBottom: '14px' }}>
                     <div>
-                      <label style={formLabelStyle}>Model Name</label>
+                      <label style={formLabelStyle}>{t('modelName')}</label>
                       <input
                         type="text"
                         value={aiDraft.model || ''}
@@ -2099,7 +2104,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       />
                     </div>
                     <div>
-                      <label style={formLabelStyle}>API Base URL (Optional Override)</label>
+                      <label style={formLabelStyle}>{t('apiBaseUrl')}</label>
                       <input
                         type="text"
                         value={aiDraft.baseUrl || ''}
@@ -2114,7 +2119,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                   {/* Fallback Static Message */}
                   <div>
-                    <label style={formLabelStyle}>Static Fallback Message (If AI fails or balance depleted)</label>
+                    <label style={formLabelStyle}>{t('fallbackMessageLabel')}</label>
                     <textarea
                       rows={2}
                       value={aiDraft.fallbackMessage || ''}
@@ -2136,16 +2141,16 @@ export default function MasterControlPanel({ onBackToHome }) {
                       </div>
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                          Backup API Fallback Chain (5 Slots)
+                          {t('backupChainTitle')}
                         </span>
                         <div style={{ fontSize: '11px', color: '#64748b' }}>
-                          If the primary key hits a rate limit or 500 error, APK automatically tries enabled backup slots sequentially.
+                          {t('backupChainDesc')}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Enable Backup Chain:</span>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>{t('enableBackupChain')}</span>
                       <CustomSwitch
                         checked={aiDraft.backupEnabled !== false}
                         onChange={(checked) => {
@@ -2191,7 +2196,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 {slotNum}
                               </span>
                               <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-                                Backup Slot {slotNum}: {PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.name}
+                                {t('backupSlot', { n: slotNum })}: {PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.name}
                               </span>
                             </div>
 
@@ -2211,7 +2216,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
                               {/* Provider Chips for Slot */}
                               <div>
-                                <label style={formLabelStyle}>Backup Provider</label>
+                                <label style={formLabelStyle}>{t('backupProvider')}</label>
                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                   {Object.keys(PROVIDER_DEFAULTS).map(provKey => (
                                     <button
@@ -2249,11 +2254,11 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                               {/* Backup API Key */}
                               <div>
-                                <label style={formLabelStyle}>Backup API Key</label>
+                                <label style={formLabelStyle}>{t('backupApiKey')}</label>
                                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                   <input
                                     type={showKeyMap[slotKey] ? 'text' : 'password'}
-                                    placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.placeholder || 'Enter API Key...'}
+                                    placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.placeholder || t('enterApiKey')}
                                     value={slotData.apiKey || ''}
                                     onChange={(e) => {
                                       setEditFlags(prev => ({ ...prev, ai: true }));
@@ -2284,7 +2289,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                               {/* Backup Slot Model & API Base URL */}
                               <div style={colGrid(200, 10)}>
                                 <div>
-                                  <label style={formLabelStyle}>Backup Model Name</label>
+                                  <label style={formLabelStyle}>{t('backupModelName')}</label>
                                   <input
                                     type="text"
                                     placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.model || 'Model name...'}
@@ -2301,7 +2306,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 </div>
 
                                 <div>
-                                  <label style={formLabelStyle}>API Base URL (Optional Override)</label>
+                                  <label style={formLabelStyle}>{t('apiBaseUrl')}</label>
                                   <input
                                     type="text"
                                     placeholder={PROVIDER_DEFAULTS[slotData.provider || 'GEMINI']?.baseUrl || 'https://...'}
@@ -2331,7 +2336,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     disabled={aiSaving} 
                     style={{ ...solidPrimaryBtnStyle, opacity: aiSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
-                    {aiSaving ? 'Saving & Syncing...' : 'Save AI & Backup Keys to APK'}
+                    {aiSaving ? t('savingSync') : t('saveAiKeys')}
                   </button>
                 </div>
               </div>
@@ -2344,22 +2349,22 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      Account Balance & Transaction Ledger
+                      {t('balanceLedgerTitle')}
                     </h3>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                      Complete deposit history, per-message token deductions, and manual credit adjustments.
+                      {t('balanceLedgerDesc')}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       onClick={() => {
                         fetchUsers();
-                        triggerToast('Syncing balance ledger from database...');
+                        triggerToast(t('syncingLedger'));
                       }}
                       style={{ ...pillBtnStyle, display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       <RefreshCw size={12} />
-                      <span>Refresh Ledger</span>
+                      <span>{t('refreshLedger')}</span>
                     </button>
                   </div>
                 </div>
@@ -2368,19 +2373,19 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ ...colGrid(200, 12), marginBottom: '18px' }}>
                   <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Current Available Balance
+                      {t('currentAvailableBalance')}
                     </div>
                     <div style={{ fontSize: '24px', fontWeight: '800', color: (selectedUser.balance || 0) <= 0 ? '#dc2626' : '#059669' }}>
                       ${(selectedUser.balance || 0).toFixed(4)}
                     </div>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      {(selectedUser.balance || 0) <= 0 ? '⚠️ Zero Balance • APK Paused' : '✅ Active For SMS Auto-Replies'}
+                      {(selectedUser.balance || 0) <= 0 ? t('zeroBalancePaused') : t('activeForSms')}
                     </span>
                   </div>
 
                   <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Total Deposits / Top-Ups
+                      {t('totalDeposits')}
                     </div>
                     <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
                       ${((selectedUser.balanceHistory || [])
@@ -2388,13 +2393,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                         .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)).toFixed(2)}
                     </div>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      {(selectedUser.balanceHistory || []).filter(t => (parseFloat(t.amount) || 0) > 0).length} deposit entries
+                      {t('depositEntries', { n: (selectedUser.balanceHistory || []).filter(tx => (parseFloat(tx.amount) || 0) > 0).length })}
                     </span>
                   </div>
 
                   <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Total SMS Auto-Reply Spend
+                      {t('totalSmsSpend')}
                     </div>
                     <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
                       ${Math.abs((selectedUser.balanceHistory || [])
@@ -2402,7 +2407,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || (selectedUser.activities?.reduce((sum, a) => sum + (a.cost || 0), 0) || 0)).toFixed(4)}
                     </div>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      {selectedUser.activities?.length || 0} automated messages
+                      {t('automatedMessages', { n: selectedUser.activities?.length || 0 })}
                     </span>
                   </div>
                 </div>
@@ -2411,27 +2416,27 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
                   <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Wallet size={14} color="#0f172a" />
-                    <span>Manage Store Funds</span>
+                    <span>{t('manageStoreFunds')}</span>
                   </div>
 
                   {/* Custom Amount Form */}
                   <div style={{ ...colGrid(180, 10), alignItems: 'flex-end' }}>
                     <div>
-                      <label style={formLabelStyle}>Custom Amount ($)</label>
+                      <label style={formLabelStyle}>{t('customAmount')}</label>
                       <input
                         type="number"
                         step="0.01"
-                        placeholder="e.g. 25.00"
+                        placeholder={t('phCustomAmount')}
                         value={customBalInput}
                         onChange={(e) => setCustomBalInput(e.target.value)}
                         style={customInputStyle}
                       />
                     </div>
                     <div>
-                      <label style={formLabelStyle}>Reference Note (Optional)</label>
+                      <label style={formLabelStyle}>{t('referenceNote')}</label>
                       <input
                         type="text"
-                        placeholder="e.g. Stripe checkout, Manual adjustment"
+                        placeholder={t('phReferenceNote')}
                         value={customNote}
                         onChange={(e) => setCustomNote(e.target.value)}
                         style={customInputStyle}
@@ -2450,7 +2455,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         }}
                         style={{ ...solidPrimaryBtnStyle, background: '#059669', flex: 1, padding: '9px 12px', fontSize: '12px' }}
                       >
-                        + Add Funds
+                        {t('addFunds')}
                       </button>
                       <button
                         type="button"
@@ -2464,7 +2469,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         }}
                         style={{ ...solidPrimaryBtnStyle, background: '#dc2626', flex: 1, padding: '9px 12px', fontSize: '12px' }}
                       >
-                        - Deduct
+                        {t('deductBtn')}
                       </button>
                     </div>
                   </div>
@@ -2474,7 +2479,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>
-                      Transaction History ({((selectedUser.balanceHistory || []).length)})
+                      {t('txHistory', { n: (selectedUser.balanceHistory || []).length })}
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {['all', 'topup', 'sms', 'adjustment'].map(f => (
@@ -2495,7 +2500,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                             ...tapBtn
                           }}
                         >
-                          {f === 'topup' ? 'Top-Ups' : f === 'sms' ? 'SMS Replies' : f === 'adjustment' ? 'Adjustments' : 'All'}
+                          {f === 'topup' ? t('filterTopUps') : f === 'sms' ? t('filterSmsReplies') : f === 'adjustment' ? t('filterAdjustments') : t('filterAllSimple')}
                         </button>
                       ))}
                     </div>
@@ -2513,7 +2518,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           if (balanceFilter === 'adjustment') return type.includes('adjustment') || (amt < 0 && !type.includes('sms'));
                           return true;
                         });
-                    const emptyMsg = 'No balance transactions recorded yet. Deposits and SMS deductions will appear here automatically.';
+                    const emptyMsg = t('emptyLedger');
                     if (isMobile) {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2537,7 +2542,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                     color: isPositive ? '#059669' : '#dc2626',
                                     border: `1px solid ${isPositive ? '#a7f3d0' : '#fecaca'}`
                                   }}>
-                                    {isPositive ? 'Top-Up' : tx.type || 'Deduction'}
+                                    {isPositive ? t('topUp') : tx.type || t('deduction')}
                                   </span>
                                   <span style={{ fontWeight: '800', color: isPositive ? '#059669' : '#dc2626', fontSize: '13px', flexShrink: 0 }}>
                                     {isPositive ? `+$${amt.toFixed(4)}` : `-$${Math.abs(amt).toFixed(4)}`}
@@ -2548,7 +2553,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '11px', color: '#94a3b8', flexWrap: 'wrap' }}>
                                   <span>{tx.date || new Date(tx.timestampMillis || Date.now()).toLocaleDateString()} {tx.time || new Date(tx.timestampMillis || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                  <span style={{ color: '#0f172a', fontWeight: '600' }}>{tx.balanceAfter != null ? `After $${parseFloat(tx.balanceAfter).toFixed(4)}` : '—'}</span>
+                                  <span style={{ color: '#0f172a', fontWeight: '600' }}>{tx.balanceAfter != null ? t('afterAmount', { n: parseFloat(tx.balanceAfter).toFixed(4) }) : '—'}</span>
                                 </div>
                               </div>
                             );
@@ -2561,11 +2566,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
-                          <th style={{ padding: '10px 14px' }}>Date & Time</th>
-                          <th style={{ padding: '10px 14px' }}>Type</th>
-                          <th style={{ padding: '10px 14px' }}>Amount</th>
-                          <th style={{ padding: '10px 14px' }}>Balance After</th>
-                          <th style={{ padding: '10px 14px' }}>Details / Note</th>
+                          <th style={{ padding: '10px 14px' }}>{t('dateTimeCol')}</th>
+                          <th style={{ padding: '10px 14px' }}>{t('typeCol')}</th>
+                          <th style={{ padding: '10px 14px' }}>{t('amountCol')}</th>
+                          <th style={{ padding: '10px 14px' }}>{t('balanceAfter')}</th>
+                          <th style={{ padding: '10px 14px' }}>{t('detailsNote')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2598,7 +2603,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                       color: isPositive ? '#059669' : '#dc2626',
                                       border: `1px solid ${isPositive ? '#a7f3d0' : '#fecaca'}`
                                     }}>
-                                      {isPositive ? 'Top-Up' : tx.type || 'Deduction'}
+                                      {isPositive ? t('topUp') : tx.type || t('deduction')}
                                     </span>
                                   </td>
                                   <td style={{ padding: '10px 14px', fontWeight: '800', color: isPositive ? '#059669' : '#dc2626' }}>
@@ -2628,7 +2633,7 @@ export default function MasterControlPanel({ onBackToHome }) {
               <div style={cardSectionStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    Live SMS Log ({selectedUser.activities?.length || 0})
+                    {t('liveSmsLog', { n: selectedUser.activities?.length || 0 })}
                   </h3>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {['all', 'sent', 'blocked'].map(f => (
@@ -2649,7 +2654,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           ...tapBtn
                         }}
                       >
-                        {f}
+                        {f === 'sent' ? t('filterSent') : f === 'blocked' ? t('filterBlocked') : t('filterAllSimple')}
                       </button>
                     ))}
                   </div>
@@ -2658,7 +2663,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '450px', overflowY: 'auto' }}>
                   {(!selectedUser.activities || selectedUser.activities.length === 0) ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '13px' }}>
-                      No SMS activity recorded yet. Incoming customer texts will appear here in real time.
+                      {t('noSmsActivity')}
                     </div>
                   ) : (
                     selectedUser.activities
@@ -2682,17 +2687,17 @@ export default function MasterControlPanel({ onBackToHome }) {
                             <span style={{ color: '#94a3b8', flexShrink: 0 }}>{act.time}</span>
                           </div>
                           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', wordBreak: 'break-word' }}>
-                            <strong>In:</strong> {act.incoming}
+                            <strong>{t('incomingLabel')}</strong> {act.incoming}
                           </div>
                           {act.reply && (
                             <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#1d4ed8', wordBreak: 'break-word' }}>
-                              <strong>AI Reply:</strong> {act.reply}
+                              <strong>{t('aiReplyLabel')}</strong> {act.reply}
                             </div>
                           )}
                           <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
-                            <span>In: {act.tokensIn || 0} tokens</span>
-                            <span>Out: {act.tokensOut || 0} tokens</span>
-                            <span>Cost: ${(act.cost || 0.005).toFixed(4)}</span>
+                            <span>{t('tokensInLine', { n: act.tokensIn || 0 })}</span>
+                            <span>{t('tokensOutLine', { n: act.tokensOut || 0 })}</span>
+                            <span>{t('costLine', { n: (act.cost || 0.005).toFixed(4) })}</span>
                             <span style={{ marginLeft: 'auto', fontWeight: '700', color: '#10b981' }}>{act.status}</span>
                           </div>
                         </div>
@@ -2708,10 +2713,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      Spam Protection & Operating Hours
+                      {t('spamTitle')}
                     </h3>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                      Configure individual rate limits, message limits, and auto-reply business hours.
+                      {t('spamDesc')}
                     </p>
                   </div>
                 </div>
@@ -2720,7 +2725,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   {/* Spam Rules Card */}
                   <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
                     <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '14px' }}>
-                      Rate Limiting & Anti-Spam Rules
+                      {t('rateLimitTitle')}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
@@ -2728,8 +2733,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.cooldownEnabled !== false ? '8px' : '0' }}>
                           <div>
-                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Per-Contact Cooldown</span>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>Ignore rapid incoming texts from same number</div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{t('cooldownTitle')}</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>{t('cooldownDesc')}</div>
                           </div>
                           <CustomSwitch
                             checked={spamDraft.cooldownEnabled !== false}
@@ -2741,7 +2746,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </div>
                         {spamDraft.cooldownEnabled !== false && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ color: '#64748b' }}>Cooldown Seconds:</span>
+                            <span style={{ color: '#64748b' }}>{t('cooldownSeconds')}</span>
                             <input
                               type="number"
                               value={spamDraft.cooldownSeconds ?? 90}
@@ -2759,8 +2764,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.maxRepliesEnabled !== false ? '8px' : '0' }}>
                           <div>
-                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Max Replies Cap</span>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>Limit consecutive auto-replies to one contact</div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{t('maxRepliesTitle')}</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>{t('maxRepliesDesc')}</div>
                           </div>
                           <CustomSwitch
                             checked={spamDraft.maxRepliesEnabled !== false}
@@ -2772,7 +2777,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </div>
                         {spamDraft.maxRepliesEnabled !== false && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ color: '#64748b' }}>Max Replies:</span>
+                            <span style={{ color: '#64748b' }}>{t('maxRepliesLabel')}</span>
                             <input
                               type="number"
                               value={spamDraft.maxReplies ?? 3}
@@ -2790,8 +2795,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: spamDraft.windowEnabled !== false ? '8px' : '0' }}>
                           <div>
-                            <span style={{ fontWeight: '700', color: '#0f172a' }}>Rolling Time Window</span>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>Reset conversation counter after time passes</div>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{t('windowTitle')}</span>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>{t('windowDesc')}</div>
                           </div>
                           <CustomSwitch
                             checked={spamDraft.windowEnabled !== false}
@@ -2803,7 +2808,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         </div>
                         {spamDraft.windowEnabled !== false && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ color: '#64748b' }}>Window (Minutes):</span>
+                            <span style={{ color: '#64748b' }}>{t('windowMinutes')}</span>
                             <input
                               type="number"
                               value={spamDraft.windowMinutes ?? 10}
@@ -2823,8 +2828,8 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
                       <div>
-                        <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>Operating Hours Filter</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Restrict auto-reply to specific hours or after-hours</div>
+                        <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>{t('hoursFilterTitle')}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{t('hoursFilterDesc')}</div>
                       </div>
                       <CustomSwitch
                         checked={spamDraft.scheduleEnabled === true}
@@ -2839,7 +2844,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
                         {/* Mode Chips */}
                         <div>
-                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Schedule Mode:</span>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>{t('scheduleMode')}</span>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               type="button"
@@ -2858,7 +2863,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 cursor: 'pointer'
                               }}
                             >
-                              During Hours Only
+                              {t('duringHoursOnly')}
                             </button>
                             <button
                               type="button"
@@ -2877,14 +2882,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                                 cursor: 'pointer'
                               }}
                             >
-                              After-Hours Receptionist
+                              {t('afterHoursReceptionist')}
                             </button>
                           </div>
                         </div>
 
                         {/* Start & End Time */}
                         <div>
-                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Hours Range:</span>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>{t('hoursRange')}</span>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <input
                               type="time"
@@ -2895,7 +2900,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                               }}
                               style={{ ...customInputStyle, width: isMobile ? '100%' : '100px' }}
                             />
-                            <span style={{ color: '#94a3b8' }}>to</span>
+                            <span style={{ color: '#94a3b8' }}>{t('toWord')}</span>
                             <input
                               type="time"
                               value={spamDraft.scheduleEnd || '18:00'}
@@ -2910,7 +2915,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                         {/* Active Days */}
                         <div>
-                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Active Days:</span>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>{t('activeDays')}</span>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
                               const days = spamDraft.scheduleDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -2935,7 +2940,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                     cursor: 'pointer'
                                   }}
                                 >
-                                  {day}
+                                  {t(`day${day}`)}
                                 </button>
                               );
                             })}
@@ -2944,7 +2949,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                         {/* Out of Hours Message */}
                         <div>
-                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Out-of-Hours Reply Message:</span>
+                          <span style={{ color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>{t('outOfHoursMsg')}</span>
                           <textarea
                             rows={2}
                             value={spamDraft.outOfHoursMsg || ''}
@@ -2952,7 +2957,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                               setEditFlags(prev => ({ ...prev, spam: true }));
                               setSpamDraft(prev => ({ ...prev, outOfHoursMsg: e.target.value }));
                             }}
-                            placeholder="Thanks for contacting us! We are currently closed."
+                            placeholder={t('phOutOfHours')}
                             style={{ ...customInputStyle, resize: 'vertical' }}
                           />
                         </div>
@@ -2967,7 +2972,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     disabled={spamSaving} 
                     style={{ ...solidPrimaryBtnStyle, opacity: spamSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                   >
-                    {spamSaving ? 'Saving & Syncing...' : 'Save Spam & Operating Hours'}
+                    {spamSaving ? t('savingSync') : t('saveSpamHours')}
                   </button>
                 </div>
               </div>
@@ -3026,10 +3031,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        Customer Retail Pricing Mode
+                        {t('pricingTitle')}
                       </h3>
                       <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                        Choose how this store's balance is charged per automated customer SMS reply.
+                        {t('pricingDesc')}
                       </p>
                     </div>
                   </div>
@@ -3051,14 +3056,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>
-                          Fixed Flat Fee (Recommended)
+                          {t('fixedFlatFee')}
                         </span>
                         {pricingDraft.pricingMode === 'fixed_fee' && (
-                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>Active</span>
+                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>{t('active')}</span>
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                        Deduct a fixed flat dollar rate from store balance for each automated customer SMS reply.
+                        {t('fixedFeeDesc')}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>$</span>
@@ -3074,7 +3079,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           }}
                           style={{ ...customInputStyle, width: isMobile ? '100%' : '100px', fontWeight: '700' }}
                         />
-                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>/ reply</span>
+                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>{t('perReply')}</span>
                       </div>
                     </div>
 
@@ -3094,17 +3099,17 @@ export default function MasterControlPanel({ onBackToHome }) {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>
-                          Direct AI Pass-Through
+                          {t('directPassThrough')}
                         </span>
                         {pricingDraft.pricingMode === 'default_ai' && (
-                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>Active</span>
+                          <span style={{ fontSize: '10px', background: '#0f172a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>{t('active')}</span>
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                        Zero retail markup • Bill exact raw token cost per message to the client.
+                        {t('directPassDesc')}
                       </div>
                       <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
-                        Gemini 2.5 Flash-Lite (${modelRates.GEMINI_25.inPrice} / ${modelRates.GEMINI_25.outPrice} per 1M)
+                        {t('geminiFlashLite', { in: modelRates.GEMINI_25.inPrice, out: modelRates.GEMINI_25.outPrice })}
                       </div>
                     </div>
                   </div>
@@ -3116,7 +3121,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                       disabled={pricingSaving}
                       style={{ ...solidPrimaryBtnStyle, opacity: pricingSaving ? 0.7 : 1, width: isMobile ? '100%' : undefined, ...tapBtn }}
                     >
-                      {pricingSaving ? 'Saving & Syncing...' : 'Save Pricing Settings & Sync to APK'}
+                      {pricingSaving ? t('savingSync') : t('savePricing')}
                     </button>
                   </div>
 
@@ -3126,11 +3131,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                            Actual Raw API Usage & Multi-Model Real Cost
+                            {t('rawUsageTitle')}
                           </h3>
                         </div>
                         <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                          Accurately accounts for Primary and Backup AI keys/models used during fallbacks.
+                          {t('rawUsageDesc')}
                         </p>
                       </div>
 
@@ -3153,7 +3158,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         }}
                       >
                         <Settings size={14} color="#1d4ed8" />
-                        <span>Update Model Pricing Rates</span>
+                        <span>{t('updateModelRates')}</span>
                       </button>
                     </div>
 
@@ -3161,49 +3166,49 @@ export default function MasterControlPanel({ onBackToHome }) {
                     <div style={{ ...colGrid(200, 12), marginBottom: '16px' }}>
                       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                         <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Total API Requests
+                          {t('totalApiRequests')}
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
                           {totalUserRequests.toLocaleString()}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          {primaryCount} primary • {backupCount} backup fallbacks
+                          {t('primaryBackupLine', { primary: primaryCount, backup: backupCount })}
                         </span>
                       </div>
 
                       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                         <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Total Token Volume
+                          {t('totalTokenVolume')}
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
                           {totalTokens.toLocaleString()}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          {totalTokensIn.toLocaleString()} in • {totalTokensOut.toLocaleString()} out
+                          {t('tokensInOut', { in: totalTokensIn.toLocaleString(), out: totalTokensOut.toLocaleString() })}
                         </span>
                       </div>
 
                       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                         <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Actual Raw API Cost
+                          {t('actualRawCost')}
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: '800', color: '#dc2626' }}>
                           ${totalActualRawCost.toFixed(5)}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          Calculated across all executed models
+                          {t('calcAcrossModels')}
                         </span>
                       </div>
 
                       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                         <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Est. Raw Cost / Message
+                          {t('estRawCost')}
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: '800', color: '#059669' }}>
                           ${avgRawCostPerMsg.toFixed(5)}
                         </div>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          Blended average per message
+                          {t('blendedAvg')}
                         </span>
                       </div>
                     </div>
@@ -3223,10 +3228,10 @@ export default function MasterControlPanel({ onBackToHome }) {
                     }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-                          Customer Billed vs Raw Supplier API Cost
+                          {t('customerVsRaw')}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          Total Customer Spend: <strong style={{ color: '#0f172a' }}>${totalCustomerBilled.toFixed(4)}</strong> • Actual API Cost: <strong style={{ color: '#dc2626' }}>${totalActualRawCost.toFixed(5)}</strong>
+                          {t('totalCustomerSpend')}: <strong style={{ color: '#0f172a' }}>${totalCustomerBilled.toFixed(4)}</strong> • {t('actualApiCostLabel')}: <strong style={{ color: '#dc2626' }}>${totalActualRawCost.toFixed(5)}</strong>
                         </div>
                       </div>
 
@@ -3239,7 +3244,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                         padding: '8px 14px',
                         borderRadius: '8px'
                       }}>
-                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Gross Margin:</span>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>{t('grossMargin')}</span>
                         <span style={{ fontSize: '14px', fontWeight: '800', color: netMargin >= 0 ? '#059669' : '#dc2626' }}>
                           {netMargin >= 0 ? `+$${netMargin.toFixed(4)} (+${marginPercent}%)` : `-$${Math.abs(netMargin).toFixed(4)} (${marginPercent}%)`}
                         </span>
@@ -3251,19 +3256,19 @@ export default function MasterControlPanel({ onBackToHome }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                           <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                            Token Usage & Raw Cost History Log ({filteredRawActivities.length})
+                            {t('tokenLogTitle', { n: filteredRawActivities.length })}
                           </h4>
                           <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' }}>
-                            Per-reply breakdown showing exact tokens and cost for the specific model that replied.
+                            {t('tokenLogDesc')}
                           </p>
                         </div>
 
                         {/* Filter Tabs */}
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           {[
-                            { key: 'all', label: `All (${enrichedActivities.length})` },
-                            { key: 'primary', label: `Primary AI (${primaryCount})` },
-                            { key: 'backup', label: `Backup AI (${backupCount})` }
+                            { key: 'all', label: t('filterAll', { n: enrichedActivities.length }) },
+                            { key: 'primary', label: t('filterPrimary', { n: primaryCount }) },
+                            { key: 'backup', label: t('filterBackup', { n: backupCount }) }
                           ].map(tab => (
                             <button
                               key={tab.key}
@@ -3292,14 +3297,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {filteredRawActivities.length === 0 ? (
                               <div style={{ textAlign: 'center', padding: '24px 12px', color: '#94a3b8', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                                No message executions found for this filter.
+                                {t('noExecutions')}
                               </div>
                             ) : filteredRawActivities.map((act, i) => (
                               <div key={act.id || i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                                   <div style={{ minWidth: 0 }}>
                                     <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px', wordBreak: 'break-word' }}>{act.sender}</div>
-                                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{act.time || 'Just now'}</div>
+                                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{act.time || t('justNow')}</div>
                                   </div>
                                   <span style={{
                                     display: 'inline-flex',
@@ -3316,11 +3321,11 @@ export default function MasterControlPanel({ onBackToHome }) {
                                   </span>
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#0f172a', marginBottom: '8px' }}>
-                                  {act.inT} in • {act.outT} out <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
+                                  {t('tokensInOut', { in: act.inT, out: act.outT })} <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', fontSize: '11px' }}>
-                                  <span style={{ color: '#dc2626', fontWeight: '700' }}>Cost ${act.rawMsgCost.toFixed(6)}</span>
-                                  <span style={{ color: '#0f172a', fontWeight: '700' }}>Billed ${act.billedCost.toFixed(4)}</span>
+                                  <span style={{ color: '#dc2626', fontWeight: '700' }}>{t('costShort')} ${act.rawMsgCost.toFixed(6)}</span>
+                                  <span style={{ color: '#0f172a', fontWeight: '700' }}>{t('billedShort')} ${act.billedCost.toFixed(4)}</span>
                                   <span style={{ fontWeight: '700', color: act.margin >= 0 ? '#059669' : '#dc2626' }}>
                                     {act.margin >= 0 ? `+$${act.margin.toFixed(4)}` : `-$${Math.abs(act.margin).toFixed(4)}`}
                                   </span>
@@ -3333,27 +3338,27 @@ export default function MasterControlPanel({ onBackToHome }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: '700', fontSize: '11px' }}>
-                              <th style={{ padding: '10px 14px' }}>Time</th>
-                              <th style={{ padding: '10px 14px' }}>Sender</th>
-                              <th style={{ padding: '10px 14px' }}>Model / Engine Used</th>
-                              <th style={{ padding: '10px 14px' }}>Tokens (In / Out)</th>
-                              <th style={{ padding: '10px 14px' }}>Raw Supplier Cost</th>
-                              <th style={{ padding: '10px 14px' }}>Customer Billed</th>
-                              <th style={{ padding: '10px 14px' }}>Gross Margin</th>
+                              <th style={{ padding: '10px 14px' }}>{t('timeCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('senderCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('modelEngineCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('tokensInOutCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('rawSupplierCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('customerBilledCol')}</th>
+                              <th style={{ padding: '10px 14px' }}>{t('grossMarginCol')}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filteredRawActivities.length === 0 ? (
                               <tr>
                                 <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
-                                  No message executions found for this filter.
+                                  {t('noExecutions')}
                                 </td>
                               </tr>
                             ) : (
                               filteredRawActivities.map((act, i) => (
                                 <tr key={act.id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                   <td style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                                    {act.time || 'Just now'}
+                                    {act.time || t('justNow')}
                                   </td>
                                   <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
                                     {act.sender}
@@ -3375,7 +3380,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                                     </span>
                                   </td>
                                   <td style={{ padding: '10px 14px', color: '#0f172a', fontWeight: '600' }}>
-                                    <span>{act.inT} in</span> • <span>{act.outT} out</span> <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
+                                    <span>{t('tokensInOut', { in: act.inT, out: act.outT })}</span> <span style={{ color: '#94a3b8', fontSize: '10px' }}>({act.totalT})</span>
                                   </td>
                                   <td style={{ padding: '10px 14px', fontWeight: '700', color: '#dc2626' }}>
                                     ${act.rawMsgCost.toFixed(6)}
@@ -3405,14 +3410,14 @@ export default function MasterControlPanel({ onBackToHome }) {
             {activeTab === 'blacklist' && (
               <div style={cardSectionStyle}>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px 0' }}>
-                  Manual Reply List (Do Not Auto-Reply)
+                  {t('manualListTitle')}
                 </h3>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
                   <input
                     id="newBlockInput"
                     type="text"
-                    placeholder="Enter phone number (+1...)"
+                    placeholder={t('phPhoneNumber')}
                     style={{ ...customInputStyle, maxWidth: isMobile ? '100%' : '260px' }}
                   />
                   <button
@@ -3425,14 +3430,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                     }}
                     style={{ ...solidPrimaryBtnStyle, ...tapBtn, width: isMobile ? '100%' : undefined }}
                   >
-                    + Add Number
+                    {t('addNumber')}
                   </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {(!selectedUser.blacklist || selectedUser.blacklist.length === 0) ? (
                     <div style={{ color: '#94a3b8', fontSize: '13px', padding: '16px 0', textAlign: 'center' }}>
-                      No phone numbers in manual reply list.
+                      {t('noManualNumbers')}
                     </div>
                   ) : (
                     selectedUser.blacklist.map(num => (
@@ -3450,7 +3455,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                           onClick={() => handleRemoveBlockedNumber(num)}
                           style={{ background: 'transparent', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
                         >
-                          Remove
+                          {t('remove')}
                         </button>
                       </div>
                     ))
@@ -3505,15 +3510,15 @@ export default function MasterControlPanel({ onBackToHome }) {
               </button>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' }}>
-              Provision client credentials for instant on-device APK login.
+              {t('createStoreDesc')}
             </p>
 
             <form onSubmit={handleCreateNewUser} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={formLabelStyle}>User ID (Required)</label>
+                <label style={formLabelStyle}>{t('userIdRequired')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. store_downtown_01"
+                  placeholder={t('phUserId')}
                   value={newUserId}
                   onChange={(e) => setNewUserId(e.target.value)}
                   style={customInputStyle}
@@ -3522,10 +3527,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
 
               <div>
-                <label style={formLabelStyle}>Password (Required)</label>
+                <label style={formLabelStyle}>{t('passwordRequired')}</label>
                 <input
                   type="password"
-                  placeholder="Password..."
+                  placeholder={t('phPassword')}
                   value={newUserPass}
                   onChange={(e) => setNewUserPass(e.target.value)}
                   style={customInputStyle}
@@ -3534,10 +3539,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               </div>
 
               <div>
-                <label style={formLabelStyle}>Store / Business Name</label>
+                <label style={formLabelStyle}>{t('storeBusinessName')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Downtown Bakery"
+                  placeholder={t('phStoreName')}
                   value={newStoreName}
                   onChange={(e) => setNewStoreName(e.target.value)}
                   style={customInputStyle}
@@ -3546,7 +3551,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={formLabelStyle}>Initial Balance ($)</label>
+                  <label style={formLabelStyle}>{t('initialBalance')}</label>
                   <input
                     type="number"
                     step="1.00"
@@ -3556,7 +3561,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   />
                 </div>
                 <div>
-                  <label style={formLabelStyle}>Message Fee ($)</label>
+                  <label style={formLabelStyle}>{t('messageFee')}</label>
                   <input
                     type="number"
                     step="0.001"
@@ -3590,14 +3595,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                     ...tapBtn
                   }}
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
                   style={{ ...solidPrimaryBtnStyle, width: isMobile ? '100%' : undefined, ...tapBtn }}
                 >
-                  {loading ? 'Creating...' : '+ Create Account'}
+                  {loading ? t('creating') : t('createAccount')}
                 </button>
               </div>
             </form>
@@ -3634,10 +3639,10 @@ export default function MasterControlPanel({ onBackToHome }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Change Store Credentials
+                  {t('changeCredsTitle')}
                 </h3>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Update User ID and APK login password for <strong>{selectedUser.storeName || selectedUser.id}</strong>
+                  {t('changeCredsDesc', { name: selectedUser.storeName || selectedUser.id })}
                 </p>
               </div>
               <button
@@ -3650,7 +3655,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
             <form onSubmit={handleSaveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={formLabelStyle}>Store User ID (Username)</label>
+                <label style={formLabelStyle}>{t('storeUserId')}</label>
                 <input
                   type="text"
                   value={credUserId}
@@ -3660,12 +3665,12 @@ export default function MasterControlPanel({ onBackToHome }) {
                   autoFocus
                 />
                 <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                  Login username used in the Android APK
+                  {t('apkUsernameHint')}
                 </span>
               </div>
 
               <div>
-                <label style={formLabelStyle}>APK Password</label>
+                <label style={formLabelStyle}>{t('apkPassword')}</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
                     type={showPasswordMap['cred_modal_pass'] ? 'text' : 'password'}
@@ -3690,7 +3695,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                   </button>
                 </div>
                 <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                  Password used for store authentication
+                  {t('apkPasswordHint')}
                 </span>
               </div>
 
@@ -3727,14 +3732,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                     ...tapBtn
                   }}
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={credLoading}
                   style={{ ...solidPrimaryBtnStyle, padding: '8px 16px', width: isMobile ? '100%' : undefined, ...tapBtn }}
                 >
-                  {credLoading ? 'Saving...' : 'Save & Sync Credentials'}
+                  {credLoading ? t('saving') : t('saveSyncCredentials')}
                 </button>
               </div>
             </form>
@@ -3772,10 +3777,10 @@ export default function MasterControlPanel({ onBackToHome }) {
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Settings size={18} color="#1d4ed8" />
-                  Update Supplier AI Model Pricing
+                  {t('updateSupplierPricing')}
                 </h3>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-                  Customize raw supplier rates (in USD per 1,000,000 tokens). Live SMS analytics update automatically.
+                  {t('supplierPricingDesc')}
                 </p>
               </div>
               <button
@@ -3805,13 +3810,13 @@ export default function MasterControlPanel({ onBackToHome }) {
                     }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{m.name}</div>
-                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b', wordBreak: 'break-all' }}>{m.model}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', wordBreak: 'break-all' }}>{m.model}</div>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
-                            Input ($/1M)
+                            {t('inputPer1M')}
                           </label>
                           <input
                             type="number"
@@ -3831,7 +3836,7 @@ export default function MasterControlPanel({ onBackToHome }) {
 
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '2px' }}>
-                            Output ($/1M)
+                            {t('outputPer1M')}
                           </label>
                           <input
                             type="number"
@@ -3871,7 +3876,7 @@ export default function MasterControlPanel({ onBackToHome }) {
                     ...tapBtn
                   }}
                 >
-                  ↺ Reset 2026 Defaults
+                  {t('reset2026Defaults')}
                 </button>
 
                 <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
@@ -3890,14 +3895,14 @@ export default function MasterControlPanel({ onBackToHome }) {
                       flex: isMobile ? 1 : undefined,
                       ...tapBtn
                     }}
-                  >
-                    Cancel
+                    >
+                    {t('cancel')}
                   </button>
                   <button
                     type="submit"
                     style={{ ...solidPrimaryBtnStyle, padding: '8px 18px', flex: isMobile ? 1 : undefined, ...tapBtn }}
                   >
-                    Save Custom Pricing Rates
+                    {t('saveCustomRates')}
                   </button>
                 </div>
               </div>
@@ -3972,6 +3977,7 @@ const customInputStyle = {
   borderRadius: '8px',
   padding: '9px 12px',
   fontSize: '13px',
+  fontFamily: 'inherit',
   color: '#0f172a',
   outline: 'none',
   boxSizing: 'border-box',
